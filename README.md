@@ -1,4 +1,4 @@
-sproto-unity
+sproto-cs
 ============
 
-Sproto in c#
+Sproto using c#
