@@ -1,5 +1,4 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -81,7 +80,7 @@ public class SpProtoParser {
 			return null;
 
 		string name = words[0];
-		int tag = int.Parse (words[1]);
+        short tag = short.Parse (words[1]);
 		string type = words[2];
 		bool array = false;
 		if (type[0] == '*') {

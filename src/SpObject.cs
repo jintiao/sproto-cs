@@ -1,5 +1,4 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 public class SpObject {
 	private SpType mType;
@@ -92,6 +91,24 @@ public class SpObject {
 		set { mValue = value; }
 	}
 
+    public int GetInt () {
+        if (mType.Name.Equals ("integer") && mValue != null && mValue.GetType () == typeof (int))
+            return (int)mValue;
+        return 0;
+    }
+
+    public bool GetBoolean () {
+        if (mType.Name.Equals ("boolean") && mValue != null && mValue.GetType () == typeof (bool))
+            return (bool)mValue;
+        return false;
+    }
+
+    public string GetString () {
+        if (mType.Name.Equals ("string") && mValue != null && mValue.GetType () == typeof (string))
+            return (string)mValue;
+        return string.Empty;
+    }
+
 	public string Dump() {
 		return Dump (0);
 	}
@@ -103,7 +120,7 @@ public class SpObject {
 			if (obj == null)
 				continue;
 
-			if (f.TypeName.Equals ("integer") || f.TypeName.Equals ("boolean") || f.TypeName.Equals ("string")) {
+            if (SpTypeManager.IsBuildinType (f.TypeName)) {
 				str += GetTab (tab + 1) + f.Name + "(" + obj.Value + ")\n";
 			}
 			else {

@@ -1,14 +1,13 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
 
 public class SpField {
 	public string Name;
-	public int Tag;
 	public SpType Type;
-	public string TypeName;
+    public string TypeName;
+    public short Tag;
 	public bool Array;
 
-	public SpField (string name, int tag, string type, bool array) {
+	public SpField (string name, short tag, string type, bool array) {
 		Name = name;
 		Tag = tag;
 		TypeName = type;

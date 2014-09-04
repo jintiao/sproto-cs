@@ -1,5 +1,4 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 
 public class SpTypeManager : SpProtoParserListener {
@@ -61,4 +60,10 @@ public class SpTypeManager : SpProtoParserListener {
 	public static void Import (Stream stream) {
 		new SpProtoParser (sInstance).Parse (stream);
 	}
+
+    public static bool IsBuildinType (string type) {
+        if (type.Equals ("integer") || type.Equals ("boolean") || type.Equals ("string"))
+            return true;
+        return false;
+    }
 }
