@@ -1,0 +1,7 @@
+* error handle
+* type check
+* pack/unpack
+* encode/decode
+* array
+* stream seek check
+* tag overflow check
