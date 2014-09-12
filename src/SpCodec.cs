@@ -10,109 +10,158 @@ public class SpCodec {
         mStream = stream;
     }
 
-    public void Encode (SpObject obj) {
-        if (WriteBuildinObject (obj))
-            return;
+    public int Encode (SpType type, SpObject obj, bool writeLength) {
+        int len = WriteBuildinObject (type, obj);
+        if (len > 0)
+            return len;
 
         long begin = mStream.Position;
 
-        short tag = 0;
+        short tag = -1;
         short fn = 0;
-        short dn = 0;
-        List<SpObject> Objs = new List<SpObject> ();
+        List<KeyValuePair<SpObject, SpType>> objs = new List<KeyValuePair<SpObject, SpType>> ();
 
-        WriteInt (0);
+        if (writeLength)
+            WriteInt (0);
+        // skip header
+        WriteShort (0);
 
-        foreach (SpField f in obj.Type.Fields.Values) {
-            SpObject o = obj.GetObject (f.Tag);
-            if (o == null)
+        foreach (SpField f in type.Fields.Values) {
+            SpObject o = obj.Get (f.Name);
+            if (o == null || IsTypeMatch (f, o) == false)
                 continue;
 
             fn++;
-            WriteShort ((short)(f.Tag - tag));
-            tag = f.Tag;
+
+            if (f.Tag <= tag) {
+                // error handle
+            }
+
+            if (f.Tag - tag != 1) {
+                WriteTag (f.Tag - tag - 1);
+                fn++;
+            }
 
             if (WriteEmbedObject (o) == false) {
-                dn++;
-                Objs.Add (o);
+                objs.Add (new KeyValuePair<SpObject, SpType> (o, f.Type));
+                WriteShort (0);
             }
+
+            tag = f.Tag;
         }
 
-        foreach (SpObject o in Objs) {
-            Encode (o);
+        foreach (KeyValuePair<SpObject, SpType> entry in objs) {
+            if (entry.Key.IsArray ()) {
+                WriteArray (entry.Value, entry.Key.ToArray ());
+            }
+            else {
+                Encode (entry.Value, entry.Key, true);
+            }
         }
 
         long end = mStream.Position;
         mStream.Position = begin;
+
+        if (writeLength)
+            WriteInt ((int)(end - begin - 4));
         WriteShort (fn);
-        WriteShort (dn);
         mStream.Position = end;
+        return (int)(end - begin);
  	}
 
-    private void WriteShort (short n) {
-        byte[] b = BitConverter.GetBytes (n);
-        mStream.Write (b, 0, b.Length);
+    private int WriteArray (SpType type, List<SpObject> array) {
+        long begin = mStream.Position;
+        WriteInt (0);
+
+        foreach (SpObject o in array) {
+            Encode (type, o, true);
+        }
+
+        long end = mStream.Position;
+        mStream.Position = begin;
+        WriteInt ((int)(end - begin - 4));
+        mStream.Position = end;
+        return (int)(end - begin);
     }
 
-    private void WriteInt (int n) {
+    private int WriteShort (short n) {
         byte[] b = BitConverter.GetBytes (n);
         mStream.Write (b, 0, b.Length);
+        return b.Length;
     }
 
-    private void WriteString (string s) {
-        WriteInt (s.Length);
+    private int WriteInt (int n) {
+        byte[] b = BitConverter.GetBytes (n);
+        mStream.Write (b, 0, b.Length);
+        return b.Length;
+    }
 
+    private int WriteString (string s) {
         byte[] b = Encoding.UTF8.GetBytes (s);
+        int l = WriteInt (b.Length);
         mStream.Write (b, 0, b.Length);
+        return (l + b.Length);
     }
 
-    private void WriteBoolean (bool b) {
-        int n = 1;
+    private int WriteBoolean (bool b) {
+        int n = 0;
         if (b)
-            n = 2;
-        WriteInt (n);
+            n = 1;
+        return WriteInt (n);
     }
 
     private bool WriteEmbedObject (SpObject obj) {
-        if (obj.Type.Name.Equals ("boolean")) {
-            short n = 1;
-            if (obj.GetBoolean ())
-                n = 2;
-            WriteShort (n);
+        if (obj.IsBoolean ()) {
+            short n = 0;
+            if (obj.ToBoolean ())
+                n = 1;
+            WriteEmbedValue (n);
             return true;
         }
-        else if (obj.Type.Name.Equals ("integer")) {
-            int i = obj.GetInt ();
-            short n = (short)i;
-            if (i == n) {
-                WriteShort (n);
+        else if (obj.IsInt ()) {
+            int n = obj.ToInt ();
+            if (n >= 0 && n < 0x7fff) {
+                WriteEmbedValue (n);
                 return true;
             }
         }
 
-        WriteShort (0);
         return false;
     }
 
-    private bool WriteBuildinObject (SpObject obj) {
-        if (obj.Type.Name.Equals ("boolean")) {
-            WriteBoolean (obj.GetBoolean ());
+    private int WriteBuildinObject (SpType type, SpObject obj) {
+        int len = 0;
+
+        if (obj.IsBoolean ()) {
+            len += WriteInt (4);
+            len += WriteBoolean (obj.ToBoolean ());
         }
-        else if (obj.Type.Name.Equals ("integer")) {
-            WriteInt (obj.GetInt ());
+        else if (obj.IsInt ()) {
+            len += WriteInt (4);
+            len += WriteInt (obj.ToInt ());
         }
-        else if (obj.Type.Name.Equals ("string")) {
-            WriteString (obj.GetString ());
-        }
-        else {
-            return false;
+        else if (obj.IsString ()) {
+            len += WriteString (obj.ToString ());
         }
 
-        return true;
+        return len;
     }
 
-    public static void Encode (SpObject obj, Stream stream) {
+    private void WriteTag (int gap) {
+        WriteShort ((short)(2 * gap - 1));
+    }
+
+    private void WriteEmbedValue (int n) {
+        WriteShort ((short)((n + 1) * 2));
+    }
+
+    public static void Encode (string proto, SpObject obj, Stream stream) {
         SpCodec codec = new SpCodec (stream);
-        codec.Encode (obj);
+        codec.Encode (SpTypeManager.Instance.GetType (proto), obj, false);
 	}
+
+    private static bool IsTypeMatch (SpField f, SpObject o) {
+        // TODO : type check
+        return true;
+    }
 }
