@@ -73,8 +73,22 @@ public class SpCodec {
         long begin = mStream.Position;
         WriteInt (0);
 
-        foreach (SpObject o in array) {
-            Encode (type, o, true);
+        if (type.Name.Equals ("integer")) {
+            // TODO : detect number size
+            WriteByte (4);
+            foreach (SpObject o in array) {
+                WriteInt (o.ToInt ());
+            }
+        }
+        else if (type.Name.Equals ("boolean")) {
+            foreach (SpObject o in array) {
+                WriteBoolean (o.ToBoolean ());
+            }
+        }
+        else {
+            foreach (SpObject o in array) {
+                Encode (type, o, true);
+            }
         }
 
         long end = mStream.Position;
@@ -82,6 +96,11 @@ public class SpCodec {
         WriteInt ((int)(end - begin - 4));
         mStream.Position = end;
         return (int)(end - begin);
+    }
+
+    private int WriteByte (byte n) {
+        mStream.WriteByte (n);
+        return 1;
     }
 
     private int WriteShort (short n) {
@@ -104,10 +123,10 @@ public class SpCodec {
     }
 
     private int WriteBoolean (bool b) {
-        int n = 0;
+        byte n = 0;
         if (b)
             n = 1;
-        return WriteInt (n);
+        return WriteByte (n);
     }
 
     private bool WriteEmbedObject (SpObject obj) {
@@ -162,6 +181,9 @@ public class SpCodec {
 
     private static bool IsTypeMatch (SpField f, SpObject o) {
         // TODO : type check
+        if (f.Array != o.IsArray ()) {
+            return false;
+        }
         return true;
     }
 }

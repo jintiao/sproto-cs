@@ -37,9 +37,9 @@ public class SpTest {
         obj.Insert ("f", f);
 
         SpObject g = new SpObject ();
-        f.Append (true);
-        f.Append (false);
-        f.Append (true);
+        g.Append (true);
+        g.Append (false);
+        g.Append (true);
         obj.Insert ("g", g);
 
         SpObject h = new SpObject ();
