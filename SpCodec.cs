@@ -2,13 +2,20 @@
 using System.IO;
 using System;
 using System.Text;
+using UnityEngine;
 
 public class SpCodec {
     private Stream mStream;
+	private byte[] mBuffer;
 
     public SpCodec (Stream stream) {
         mStream = stream;
-    }
+	}
+
+	public SpCodec (Stream stream, int len) {
+		mStream = stream;
+		mBuffer = new byte[len];
+	}
 
     public int Encode (SpType type, SpObject obj, bool writeLength) {
         int len = WriteBuildinObject (type, obj);
@@ -69,6 +76,84 @@ public class SpCodec {
         return (int)(end - begin);
  	}
 
+	public SpObject Decode (SpType type) {
+		SpObject obj = new SpObject ();
+
+		int fn = ReadShort ();
+
+		List<int> tags = new List<int> ();
+		int tag = 0;
+		for (int i = 0; i < fn; i++) {
+			int v = ReadShort ();
+			if (v == 0) {
+				tags.Add (tag);
+			}
+			else {
+				if (v % 2 == 0) {
+					int value = v / 2 - 1;
+					SpField f = type.GetFieldByTag (tag);
+					if (f == null)
+						return null;
+
+					if (f.TypeName.Equals ("integer")) {
+						obj.Insert (f.Name, value);
+					}
+					else if (f.TypeName.Equals ("boolean")) {
+						bool b = (value == 0 ? false : true);
+						obj.Insert (f.Name, b);
+					}
+					else {
+						return null;
+					}
+				}
+				else {
+					tag += (v + 1) / 2 - 1;
+				}
+			}
+			tag++;
+		}
+
+		foreach (int t in tags) {
+			SpField f = type.GetFieldByTag (t);
+			if (f == null)
+				return null;
+
+			if (f.Array) {
+				int len = ReadInt ();
+				mStream.Read (mBuffer, 0, len);
+			}
+			else {
+				int len = ReadInt ();
+
+				if (f.TypeName.Equals ("integer")) {
+					switch (len) {
+					case 4:
+						int nnn = ReadInt ();
+						obj.Insert (f.Name, nnn);
+						break;
+					}
+				}
+				else if (f.TypeName.Equals ("boolean")) {
+					obj.Insert (f.Name, ReadBoolean ());
+				}
+				else if (f.TypeName.Equals ("string")) {
+					obj.Insert (f.Name, ReadString (len));
+				}
+				else {
+					if (f.Type == null) {
+						mStream.Read (mBuffer, 0, len);
+					}
+					else {
+						SpObject o = Decode (f.Type);
+						obj.Insert (f.Name, o);
+					}
+				}
+			}
+		}
+
+		return obj;
+	}
+
     private int WriteArray (SpType type, List<SpObject> array) {
         long begin = mStream.Position;
         WriteInt (0);
@@ -109,11 +194,21 @@ public class SpCodec {
         return b.Length;
     }
 
+	private int ReadShort () {
+		mStream.Read (mBuffer, 0, 2);
+		return BitConverter.ToInt16 (mBuffer, 0);
+	}
+
     private int WriteInt (int n) {
         byte[] b = BitConverter.GetBytes (n);
         mStream.Write (b, 0, b.Length);
         return b.Length;
     }
+
+	private int ReadInt () {
+		mStream.Read (mBuffer, 0, 4);
+		return BitConverter.ToInt32 (mBuffer, 0);
+	}
 
     private int WriteString (string s) {
         byte[] b = Encoding.UTF8.GetBytes (s);
@@ -122,12 +217,28 @@ public class SpCodec {
         return (l + b.Length);
     }
 
+	private string ReadString (int len) {
+		len += 1;
+		if (len > mBuffer.Length)
+			mBuffer = new byte[len];
+		mStream.Read (mBuffer, 0, len - 1);
+		mBuffer[len - 1] = 0;
+		return Encoding.UTF8.GetString (mBuffer);
+	}
+
     private int WriteBoolean (bool b) {
         byte n = 0;
         if (b)
             n = 1;
         return WriteByte (n);
     }
+
+	private bool ReadBoolean () {
+		int n = mStream.ReadByte ();
+		if (n != 0)
+			return true;
+		return false;
+	}
 
     private bool WriteEmbedObject (SpObject obj) {
         if (obj.IsBoolean ()) {
@@ -175,8 +286,21 @@ public class SpCodec {
     }
 
     public static void Encode (string proto, SpObject obj, Stream stream) {
+		SpType type = SpTypeManager.Instance.GetType (proto);
+		if (type == null)
+			return;
+
         SpCodec codec = new SpCodec (stream);
-        codec.Encode (SpTypeManager.Instance.GetType (proto), obj, false);
+		codec.Encode (type, obj, false);
+	}
+
+	public static SpObject Decode (string proto, Stream stream) {
+		SpType type = SpTypeManager.Instance.GetType (proto);
+		if (type == null)
+			return null;
+
+		SpCodec codec = new SpCodec (stream, 64);
+		return codec.Decode (type);
 	}
 
     private static bool IsTypeMatch (SpField f, SpObject o) {

@@ -112,6 +112,10 @@ public class SpObject {
     public List<SpObject> ToArray () {
         return (List<SpObject>)mValue;
     }
+
+	public bool Match (SpObject obj) {
+		return true;
+	}
     
 	public string Dump() {
 		return Dump (0);
