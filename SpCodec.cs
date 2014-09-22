@@ -2,7 +2,6 @@
 using System.IO;
 using System;
 using System.Text;
-using UnityEngine;
 
 public class SpCodec {
     private Stream mStream;
@@ -218,12 +217,10 @@ public class SpCodec {
     }
 
 	private string ReadString (int len) {
-		len += 1;
 		if (len > mBuffer.Length)
 			mBuffer = new byte[len];
-		mStream.Read (mBuffer, 0, len - 1);
-		mBuffer[len - 1] = 0;
-		return Encoding.UTF8.GetString (mBuffer);
+		mStream.Read (mBuffer, 0, len);
+		return Encoding.UTF8.GetString (mBuffer, 0, len);
 	}
 
     private int WriteBoolean (bool b) {
