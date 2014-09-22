@@ -76,6 +76,9 @@ public class SpCodec {
  	}
 
 	public SpObject Decode (SpType type) {
+		if (SpTypeManager.IsBuildinType (type))
+			return null;
+
 		SpObject obj = new SpObject ();
 
 		int fn = ReadShort ();
@@ -118,8 +121,48 @@ public class SpCodec {
 				return null;
 
 			if (f.Array) {
-				int len = ReadInt ();
-				mStream.Read (mBuffer, 0, len);
+				int size = ReadInt ();
+
+				if (f.TypeName.Equals ("integer")) {
+					ReadByte ();
+					size -= 1;
+					
+					SpObject arr = new SpObject ();
+					while (size > 0) {
+						arr.Append (ReadInt ());
+						size -= 4;
+					}
+					obj.Insert (f.Name, arr);
+				}
+				else if (f.TypeName.Equals ("boolean")) {
+					SpObject arr = new SpObject ();
+					while (size > 0) {
+						arr.Append (ReadBoolean ());
+						size -= 1;
+					}
+					obj.Insert (f.Name, arr);
+				}
+				else if (f.TypeName.Equals ("string")) {
+				
+					SpObject arr = new SpObject ();
+
+					while (size > 0) {
+						int slen = ReadInt ();
+						size -= 4;
+						arr.Append (ReadString (slen));
+						size -= slen;
+					}
+					obj.Insert (f.Name, arr);
+				}
+				else {
+					if (f.Type == null) {
+						mStream.Read (mBuffer, 0, size);
+					}
+					else {
+						// TODO : nest type array
+						mStream.Read (mBuffer, 0, size);
+					}
+				}
 			}
 			else {
 				int len = ReadInt ();
@@ -186,6 +229,10 @@ public class SpCodec {
         mStream.WriteByte (n);
         return 1;
     }
+
+	private int ReadByte () {
+		return mStream.ReadByte ();
+	}
 
     private int WriteShort (short n) {
         byte[] b = BitConverter.GetBytes (n);

@@ -66,4 +66,8 @@ public class SpTypeManager : SpProtoParserListener {
             return true;
         return false;
     }
+
+	public static bool IsBuildinType (SpType type) {
+		return IsBuildinType (type.Name);
+	}
 }
