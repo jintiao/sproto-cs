@@ -6,6 +6,10 @@ public class SpObject {
     public SpObject () {
     }
 
+	public SpObject (long l) {
+		mValue = l;
+	}
+
     public SpObject (int i) {
         mValue = i;
     }
@@ -31,7 +35,11 @@ public class SpObject {
         if (mValue == null || mValue.GetType () != typeof (Dictionary<string, SpObject>))
             mValue = new Dictionary<string, SpObject> ();
         ((Dictionary<string, SpObject>)mValue)[key] = obj;
-    }
+	}
+	
+	public void Insert (string key, long value) {
+		Insert (key, new SpObject (value));
+	}
 
     public void Insert (string key, int value) {
         Insert (key, new SpObject (value));
@@ -50,6 +58,10 @@ public class SpObject {
             mValue = new List<SpObject> ();
         ((List<SpObject>)mValue).Add (obj);
     }
+
+	public void Append (long value) {
+		Append (new SpObject (value));
+	}
 
     public void Append (int value) {
         Append (new SpObject (value));

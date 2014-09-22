@@ -6,11 +6,18 @@ public class SpTypeManager : SpProtoParserListener {
 
 	private Dictionary<string, SpType> mTypes = new Dictionary<string, SpType> ();
 	private Dictionary<string, SpType> mIncompleteTypes = new Dictionary<string, SpType> ();
+	private SpType mTypeInteger;
+	private SpType mTypeString;
+	private SpType mTypeBoolean;
 
 	public SpTypeManager () {
-		OnNewType (new SpType ("integer", null));
-		OnNewType (new SpType ("boolean", null));
-		OnNewType (new SpType ("string", null));
+		mTypeInteger = new SpType ("integer", null);
+		mTypeString = new SpType ("boolean", null);
+		mTypeBoolean = new SpType ("string", null);
+
+		OnNewType (mTypeInteger);
+		OnNewType (mTypeString);
+		OnNewType (mTypeBoolean);
 	}
 
 	public void OnNewType (SpType type) {
@@ -52,6 +59,10 @@ public class SpTypeManager : SpProtoParserListener {
 
 		return null;
 	}
+
+	public SpType Integer { get { return mTypeInteger; } }
+	public SpType String { get { return mTypeString; } }
+	public SpType Boolean { get { return mTypeBoolean; } }
 
 	public static SpTypeManager Instance {
 		get { return sInstance; }

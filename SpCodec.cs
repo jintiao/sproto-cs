@@ -3,17 +3,26 @@ using System.IO;
 using System;
 using System.Text;
 
+public enum SpCodecMode {
+	Read,
+	Write,
+}
+
 public class SpCodec {
-    private Stream mStream;
-	private byte[] mBuffer;
+	private BinaryReader mReader;
+	private BinaryWriter mWriter;
+	private Stream mStream;
 
-    public SpCodec (Stream stream) {
+	public SpCodec (Stream stream, SpCodecMode mode) {
         mStream = stream;
-	}
-
-	public SpCodec (Stream stream, int len) {
-		mStream = stream;
-		mBuffer = new byte[len];
+		switch (mode) {
+		case SpCodecMode.Read:
+			mReader = new BinaryReader (stream);
+			break;
+		case SpCodecMode.Write:
+			mWriter = new BinaryWriter (stream);
+			break;
+		}
 	}
 
     public int Encode (SpType type, SpObject obj, bool writeLength) {
@@ -76,119 +85,131 @@ public class SpCodec {
  	}
 
 	public SpObject Decode (SpType type) {
+		if (mReader == null)
+			return null;
+
+		// buildin type decoding should not be here
 		if (SpTypeManager.IsBuildinType (type))
 			return null;
 
 		SpObject obj = new SpObject ();
 
-		int fn = ReadShort ();
-
 		List<int> tags = new List<int> ();
-		int tag = 0;
-		for (int i = 0; i < fn; i++) {
-			int v = ReadShort ();
-			if (v == 0) {
-				tags.Add (tag);
+		int current_tag = 0;
+
+		short fn = mReader.ReadInt16 ();
+		for (short i = 0; i < fn; i++) {
+			int value = (int)mReader.ReadInt16 ();
+
+			if (value == 0) {
+				tags.Add (current_tag);
+				current_tag++;
 			}
 			else {
-				if (v % 2 == 0) {
-					int value = v / 2 - 1;
-					SpField f = type.GetFieldByTag (tag);
+				if (value % 2 == 0) {
+					SpField f = type.GetFieldByTag (current_tag);
 					if (f == null)
 						return null;
 
-					if (f.TypeName.Equals ("integer")) {
+					value = value / 2 - 1;
+					if (f.Type == SpTypeManager.Instance.Integer) {
 						obj.Insert (f.Name, value);
 					}
-					else if (f.TypeName.Equals ("boolean")) {
-						bool b = (value == 0 ? false : true);
-						obj.Insert (f.Name, b);
+					else if (f.Type == SpTypeManager.Instance.Boolean) {
+						 obj.Insert (f.Name, (value == 0 ? false : true));
 					}
 					else {
 						return null;
 					}
+					current_tag++;
 				}
 				else {
-					tag += (v + 1) / 2 - 1;
+					current_tag += (value + 1) / 2;
 				}
 			}
-			tag++;
 		}
 
-		foreach (int t in tags) {
-			SpField f = type.GetFieldByTag (t);
+		foreach (int tag in tags) {
+			SpField f = type.GetFieldByTag (tag);
 			if (f == null)
 				return null;
 
-			if (f.Array) {
-				int size = ReadInt ();
+			if (f.IsArray) {
+				int size = mReader.ReadInt32 ();
 
-				if (f.TypeName.Equals ("integer")) {
-					ReadByte ();
-					size -= 1;
+				if (f.Type == SpTypeManager.Instance.Integer) {
+					byte n = mReader.ReadByte ();
+					int count = (size - 1) / n;
 					
 					SpObject arr = new SpObject ();
-					while (size > 0) {
-						arr.Append (ReadInt ());
-						size -= 4;
+					for (int i = 0; i < count; i++) {
+						switch (n) {
+						case 4:
+							arr.Append (mReader.ReadInt32 ());
+							break;
+						case 8:
+							arr.Append (mReader.ReadInt64 ());
+							break;
+						default:
+							return null;
+						}
 					}
 					obj.Insert (f.Name, arr);
 				}
-				else if (f.TypeName.Equals ("boolean")) {
+				else if (f.Type == SpTypeManager.Instance.Boolean) {
 					SpObject arr = new SpObject ();
-					while (size > 0) {
-						arr.Append (ReadBoolean ());
-						size -= 1;
+					for (int i = 0; i < size; i++) {
+						arr.Append (mReader.ReadBoolean ());
 					}
 					obj.Insert (f.Name, arr);
 				}
-				else if (f.TypeName.Equals ("string")) {
-				
+				else if (f.Type == SpTypeManager.Instance.String) {
 					SpObject arr = new SpObject ();
-
 					while (size > 0) {
-						int slen = ReadInt ();
+						int str_len = mReader.ReadInt32 ();
 						size -= 4;
-						arr.Append (ReadString (slen));
-						size -= slen;
+						arr.Append (Encoding.UTF8.GetString(mReader.ReadBytes (str_len), 0, str_len));
+						size -= str_len;
 					}
 					obj.Insert (f.Name, arr);
+				}
+				else if (f.Type == null) {
+					// unknown type
+					mReader.ReadBytes (size);
 				}
 				else {
-					if (f.Type == null) {
-						mStream.Read (mBuffer, 0, size);
-					}
-					else {
-						// TODO : nest type array
-						mStream.Read (mBuffer, 0, size);
-					}
+					// TODO : nest type array
+					mReader.ReadBytes (size);
 				}
 			}
 			else {
-				int len = ReadInt ();
+				int size = mReader.ReadInt32 ();
 
-				if (f.TypeName.Equals ("integer")) {
-					switch (len) {
+				if (f.Type == SpTypeManager.Instance.Integer) {
+					switch (size) {
 					case 4:
-						int nnn = ReadInt ();
-						obj.Insert (f.Name, nnn);
+						obj.Insert (f.Name, mReader.ReadInt32 ());
 						break;
+					case 8:
+						obj.Insert (f.Name, mReader.ReadInt64 ());
+						break;
+					default:
+						return null;
 					}
 				}
-				else if (f.TypeName.Equals ("boolean")) {
-					obj.Insert (f.Name, ReadBoolean ());
+				else if (f.Type == SpTypeManager.Instance.Boolean) {
+					// boolean should not be here
+					return null;
 				}
-				else if (f.TypeName.Equals ("string")) {
-					obj.Insert (f.Name, ReadString (len));
+				else if (f.Type == SpTypeManager.Instance.String) {
+					obj.Insert (f.Name, Encoding.UTF8.GetString(mReader.ReadBytes (size), 0, size));
+				}
+				else if (f.Type == null) {
+					// unknown type
+					mReader.ReadBytes (size);
 				}
 				else {
-					if (f.Type == null) {
-						mStream.Read (mBuffer, 0, len);
-					}
-					else {
-						SpObject o = Decode (f.Type);
-						obj.Insert (f.Name, o);
-					}
+					obj.Insert (f.Name, Decode (f.Type));
 				}
 			}
 		}
@@ -240,21 +261,11 @@ public class SpCodec {
         return b.Length;
     }
 
-	private int ReadShort () {
-		mStream.Read (mBuffer, 0, 2);
-		return BitConverter.ToInt16 (mBuffer, 0);
-	}
-
     private int WriteInt (int n) {
         byte[] b = BitConverter.GetBytes (n);
         mStream.Write (b, 0, b.Length);
         return b.Length;
     }
-
-	private int ReadInt () {
-		mStream.Read (mBuffer, 0, 4);
-		return BitConverter.ToInt32 (mBuffer, 0);
-	}
 
     private int WriteString (string s) {
         byte[] b = Encoding.UTF8.GetBytes (s);
@@ -263,26 +274,12 @@ public class SpCodec {
         return (l + b.Length);
     }
 
-	private string ReadString (int len) {
-		if (len > mBuffer.Length)
-			mBuffer = new byte[len];
-		mStream.Read (mBuffer, 0, len);
-		return Encoding.UTF8.GetString (mBuffer, 0, len);
-	}
-
     private int WriteBoolean (bool b) {
         byte n = 0;
         if (b)
             n = 1;
         return WriteByte (n);
     }
-
-	private bool ReadBoolean () {
-		int n = mStream.ReadByte ();
-		if (n != 0)
-			return true;
-		return false;
-	}
 
     private bool WriteEmbedObject (SpObject obj) {
         if (obj.IsBoolean ()) {
@@ -334,22 +331,22 @@ public class SpCodec {
 		if (type == null)
 			return;
 
-        SpCodec codec = new SpCodec (stream);
+		SpCodec codec = new SpCodec (stream, SpCodecMode.Write);
 		codec.Encode (type, obj, false);
 	}
 
 	public static SpObject Decode (string proto, Stream stream) {
 		SpType type = SpTypeManager.Instance.GetType (proto);
-		if (type == null)
+		if (type == null || stream == null)
 			return null;
 
-		SpCodec codec = new SpCodec (stream, 64);
+		SpCodec codec = new SpCodec (stream, SpCodecMode.Read);
 		return codec.Decode (type);
 	}
 
     private static bool IsTypeMatch (SpField f, SpObject o) {
         // TODO : type check
-        if (f.Array != o.IsArray ()) {
+        if (f.IsArray != o.IsArray ()) {
             return false;
         }
         return true;

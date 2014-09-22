@@ -5,13 +5,13 @@ public class SpField {
 	public SpType Type;
     public string TypeName;
     public short Tag;
-	public bool Array;
+	public bool IsArray;
 
 	public SpField (string name, short tag, string type, bool array) {
 		Name = name;
 		Tag = tag;
 		TypeName = type;
-		Array = array;
+		IsArray = array;
 	}
 
 	public bool CheckAndUpdate () {
