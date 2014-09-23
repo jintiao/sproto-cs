@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System;
 
 public class SpObject {
 	private object mValue;
@@ -112,7 +113,7 @@ public class SpObject {
     }
 
     public bool IsBuildinType () {
-        return (IsInt () || IsBoolean () || IsString ());
+        return (IsLong () || IsInt () || IsBoolean () || IsString ());
     }
 
     public bool ToBoolean () {
@@ -124,7 +125,10 @@ public class SpObject {
     }
 
     public long ToLong () {
-        return (long)mValue;
+        if (IsLong ())
+            return (long)mValue;
+
+        return Convert.ToInt64 (mValue);
     }
 
     public new string ToString () {
