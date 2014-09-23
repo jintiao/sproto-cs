@@ -10,6 +10,7 @@ public interface SpProtoParserListener {
 public class SpProtoParser {
 	private SpProtoParserListener mListener;
 	private static char[] sDelimiters = new char[] {'{', '}', '\n'};
+	private static char[] sSpace = new char[] {' ', '\t', '\n'};
 
 	public SpProtoParser (SpProtoParserListener linstener) {
 		mListener = linstener;
@@ -45,18 +46,25 @@ public class SpProtoParser {
 
 		switch (str[pos]) {
 		case '{':
-			SpType t = NewType (str.Substring (start, pos - start), scope);
-			scope = t;
+			string title = str.Substring (start, pos - start);
+			if (IsProtocol (title)) {
+			}
+			else {
+				SpType t = NewType (title, scope);
+				scope = t;
+			}
 			break;
 		case '}':
-			if (scope != null)
+			if (scope != null) {
 				mListener.OnNewType (scope);
 				scope = scope.ParentScope;
+			}
 			break;
 		case '\n':
 			SpField f = NewField (str.Substring(start, pos - start));
-			if (f != null && scope != null)
+			if (f != null && scope != null) {
 				scope.AddField (f);
+			}
 			break;
 		}
 		
@@ -64,10 +72,16 @@ public class SpProtoParser {
 		Scan (str, start, scope);
 	}
 
+	private bool IsProtocol (string str) {
+		return false;
+		//return (str.IndexOfAny (sSpace) >= 0);
+	}
+
 	private SpType NewType (string str, SpType scope) {
 		str = str.Trim ();
 		if (str[0] == '.')
 			str = str.Substring (1);
+
 		SpType t = new SpType (str, scope);
 		return t;
 	}
