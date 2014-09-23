@@ -11,10 +11,11 @@ public enum SpCodecMode {
 public class SpCodec {
 	private BinaryReader mReader;
 	private BinaryWriter mWriter;
-	private Stream mStream;
+    private Stream mStream;
 
 	public SpCodec (Stream stream, SpCodecMode mode) {
         mStream = stream;
+
 		switch (mode) {
 		case SpCodecMode.Read:
 			mReader = new BinaryReader (stream);
@@ -25,63 +26,165 @@ public class SpCodec {
 		}
 	}
 
-    public int Encode (SpType type, SpObject obj, bool writeLength) {
-        int len = WriteBuildinObject (type, obj);
-        if (len > 0)
-            return len;
+    public bool Encode (SpType type, SpObject obj) {
+        if (mWriter == null)
+            return false;
+
+        // buildin type decoding should not be here
+        if (SpTypeManager.IsBuildinType (type))
+            return false;
 
         long begin = mStream.Position;
 
-        short tag = -1;
+        // fn. will be update later
         short fn = 0;
-        List<KeyValuePair<SpObject, SpType>> objs = new List<KeyValuePair<SpObject, SpType>> ();
+        mWriter.Write (fn);
 
-        if (writeLength)
-            WriteInt (0);
-        // skip header
-        WriteShort (0);
+        List<KeyValuePair<SpObject, SpType>> objs = new List<KeyValuePair<SpObject, SpType>> ();
+        int current_tag = -1;
 
         foreach (SpField f in type.Fields.Values) {
+            if (f == null)
+                return false;
+
             SpObject o = obj.Get (f.Name);
             if (o == null || IsTypeMatch (f, o) == false)
                 continue;
 
-            fn++;
+            if (f.Tag <= current_tag)
+                return false;
 
-            if (f.Tag <= tag) {
-                // error handle
-            }
-
-            if (f.Tag - tag != 1) {
-                WriteTag (f.Tag - tag - 1);
+            if (f.Tag - current_tag > 1) {
+                mWriter.Write ((short)(2 * (f.Tag - current_tag - 1) - 1));
                 fn++;
             }
 
-            if (WriteEmbedObject (o) == false) {
-                objs.Add (new KeyValuePair<SpObject, SpType> (o, f.Type));
-                WriteShort (0);
+            bool standalone = true;
+            if (f.IsArray == false) {
+                if (f.Type == SpTypeManager.Instance.Boolean) {
+                    int value = o.ToBoolean () ? 1 : 0;
+                    mWriter.Write ((short)((value + 1) * 2));
+                    standalone = false;
+                }
+                else if (f.Type == SpTypeManager.Instance.Integer) {
+                    int value = o.ToInt ();
+                    if (value >= 0 && value < 0x7fff) {
+                        mWriter.Write ((short)((value + 1) * 2));
+                        standalone = false;
+                    }
+                }
             }
 
-            tag = f.Tag;
+            if (standalone) {
+                objs.Add (new KeyValuePair<SpObject, SpType> (o, f.Type));
+                mWriter.Write ((short)0);
+            }
+
+            fn++;
+            current_tag = f.Tag;
         }
 
         foreach (KeyValuePair<SpObject, SpType> entry in objs) {
             if (entry.Key.IsArray ()) {
-                WriteArray (entry.Value, entry.Key.ToArray ());
+                long array_begin = mStream.Position;
+                int size = 0;
+                mWriter.Write (size);
+
+                if (entry.Value == SpTypeManager.Instance.Integer) {
+                    byte len = 4;
+                    foreach (SpObject o in entry.Key.ToArray ()) {
+                        if (o.IsLong ()) {
+                            len = 8;
+                            break;
+                        }
+                    }
+
+                    mWriter.Write (len);
+                    foreach (SpObject o in entry.Key.ToArray ()) {
+                        if (len == 4) {
+                            mWriter.Write (o.ToInt ());
+                        }
+                        else {
+                            mWriter.Write (o.ToLong ());
+                        }
+                    }
+                }
+                else if (entry.Value == SpTypeManager.Instance.Boolean) {
+                    foreach (SpObject o in entry.Key.ToArray ()) {
+                         mWriter.Write ((byte)(o.ToBoolean () ? 1 : 0));
+                    }
+                }
+                else if (entry.Value == SpTypeManager.Instance.String) {
+                    foreach (SpObject o in entry.Key.ToArray ()) {
+                        byte[] b = Encoding.UTF8.GetBytes (o.ToString ());
+                        mWriter.Write (b.Length);
+                        mWriter.Write (b, 0, b.Length);
+                    }
+                }
+                else {
+                    foreach (SpObject o in entry.Key.ToArray ()) {
+                        long obj_begin = mStream.Position;
+                        int obj_size = 0;
+                        mWriter.Write (obj_size);
+
+                        if (Encode (entry.Value, o) == false)
+                            return false;
+
+                        long obj_end = mStream.Position;
+                        obj_size = (int)(obj_end - obj_begin);
+                        mStream.Position = obj_begin;
+                        mWriter.Write (obj_size);
+                        mStream.Position = obj_end;
+                    }
+                }
+
+                long array_end = mStream.Position;
+                size = (int)(array_end - array_begin - 4);
+                mStream.Position = array_begin;
+                mWriter.Write (size);
+                mStream.Position = array_end;
             }
             else {
-                Encode (entry.Value, entry.Key, true);
+                if (entry.Key.IsString ()) {
+                    byte[] b = Encoding.UTF8.GetBytes (entry.Key.ToString ());
+                    mWriter.Write (b.Length);
+                    mWriter.Write (b, 0, b.Length);
+                }
+                else if (entry.Key.IsInt ()) {
+                    mWriter.Write ((int)4);
+                    mWriter.Write (entry.Key.ToInt ());
+                }
+                else if (entry.Key.IsLong ()) {
+                    mWriter.Write ((int)8);
+                    mWriter.Write (entry.Key.ToLong ());
+                }
+                else if (entry.Key.IsBoolean ()) {
+                    // boolean should not be here
+                    return false;
+                }
+                else {
+                    long obj_begin = mStream.Position;
+                    int obj_size = 0;
+                    mWriter.Write (obj_size);
+
+                    if (Encode (entry.Value, entry.Key) == false)
+                        return false;
+
+                    long obj_end = mStream.Position;
+                    obj_size = (int)(obj_end - obj_begin - 4);
+                    mStream.Position = obj_begin;
+                    mWriter.Write (obj_size);
+                    mStream.Position = obj_end;
+                }
             }
         }
 
         long end = mStream.Position;
         mStream.Position = begin;
-
-        if (writeLength)
-            WriteInt ((int)(end - begin - 4));
-        WriteShort (fn);
+        mWriter.Write (fn);
         mStream.Position = end;
-        return (int)(end - begin);
+
+        return true;
  	}
 
 	public SpObject Decode (SpType type) {
@@ -217,122 +320,41 @@ public class SpCodec {
 		return obj;
 	}
 
-    private int WriteArray (SpType type, List<SpObject> array) {
-        long begin = mStream.Position;
-        WriteInt (0);
+    private static bool IsTypeMatch (SpField f, SpObject o) {
+        if (f == null || f.Type == null || o == null)
+            return false;
 
-        if (type.Name.Equals ("integer")) {
-            // TODO : detect number size
-            WriteByte (4);
-            foreach (SpObject o in array) {
-                WriteInt (o.ToInt ());
-            }
+        if (f.IsArray) {
+            if (o.IsArray ())
+                return true;
         }
-        else if (type.Name.Equals ("boolean")) {
-            foreach (SpObject o in array) {
-                WriteBoolean (o.ToBoolean ());
-            }
+        else if (f.Type == SpTypeManager.Instance.String) {
+            if (o.IsString ())
+                return true;
+        }
+        else if (f.Type == SpTypeManager.Instance.Boolean) {
+            if (o.IsBoolean ())
+                return true;
+        }
+        else if (f.Type == SpTypeManager.Instance.Integer) {
+            if (o.IsInt () || o.IsLong ())
+                return true;
         }
         else {
-            foreach (SpObject o in array) {
-                Encode (type, o, true);
-            }
-        }
-
-        long end = mStream.Position;
-        mStream.Position = begin;
-        WriteInt ((int)(end - begin - 4));
-        mStream.Position = end;
-        return (int)(end - begin);
-    }
-
-    private int WriteByte (byte n) {
-        mStream.WriteByte (n);
-        return 1;
-    }
-
-	private int ReadByte () {
-		return mStream.ReadByte ();
-	}
-
-    private int WriteShort (short n) {
-        byte[] b = BitConverter.GetBytes (n);
-        mStream.Write (b, 0, b.Length);
-        return b.Length;
-    }
-
-    private int WriteInt (int n) {
-        byte[] b = BitConverter.GetBytes (n);
-        mStream.Write (b, 0, b.Length);
-        return b.Length;
-    }
-
-    private int WriteString (string s) {
-        byte[] b = Encoding.UTF8.GetBytes (s);
-        int l = WriteInt (b.Length);
-        mStream.Write (b, 0, b.Length);
-        return (l + b.Length);
-    }
-
-    private int WriteBoolean (bool b) {
-        byte n = 0;
-        if (b)
-            n = 1;
-        return WriteByte (n);
-    }
-
-    private bool WriteEmbedObject (SpObject obj) {
-        if (obj.IsBoolean ()) {
-            short n = 0;
-            if (obj.ToBoolean ())
-                n = 1;
-            WriteEmbedValue (n);
-            return true;
-        }
-        else if (obj.IsInt ()) {
-            int n = obj.ToInt ();
-            if (n >= 0 && n < 0x7fff) {
-                WriteEmbedValue (n);
+            if (o.IsTable ())
                 return true;
-            }
         }
 
         return false;
     }
 
-    private int WriteBuildinObject (SpType type, SpObject obj) {
-        int len = 0;
-
-        if (obj.IsBoolean ()) {
-            len += WriteInt (4);
-            len += WriteBoolean (obj.ToBoolean ());
-        }
-        else if (obj.IsInt ()) {
-            len += WriteInt (4);
-            len += WriteInt (obj.ToInt ());
-        }
-        else if (obj.IsString ()) {
-            len += WriteString (obj.ToString ());
-        }
-
-        return len;
-    }
-
-    private void WriteTag (int gap) {
-        WriteShort ((short)(2 * gap - 1));
-    }
-
-    private void WriteEmbedValue (int n) {
-        WriteShort ((short)((n + 1) * 2));
-    }
-
-    public static void Encode (string proto, SpObject obj, Stream stream) {
+    public static bool Encode (string proto, SpObject obj, Stream stream) {
 		SpType type = SpTypeManager.Instance.GetType (proto);
-		if (type == null)
-			return;
+		if (type == null || stream == null)
+			return false;
 
 		SpCodec codec = new SpCodec (stream, SpCodecMode.Write);
-		codec.Encode (type, obj, false);
+		return codec.Encode (type, obj);
 	}
 
 	public static SpObject Decode (string proto, Stream stream) {
@@ -343,12 +365,4 @@ public class SpCodec {
 		SpCodec codec = new SpCodec (stream, SpCodecMode.Read);
 		return codec.Decode (type);
 	}
-
-    private static bool IsTypeMatch (SpField f, SpObject o) {
-        // TODO : type check
-        if (f.IsArray != o.IsArray ()) {
-            return false;
-        }
-        return true;
-    }
 }

@@ -87,6 +87,12 @@ public class SpObject {
         return (mValue.GetType () == typeof (List<SpObject>));
     }
 
+    public bool IsLong () {
+        if (mValue == null)
+            return false;
+        return (mValue.GetType () == typeof (long));
+    }
+
     public bool IsInt () {
         if (mValue == null)
             return false;
@@ -115,6 +121,10 @@ public class SpObject {
 
     public int ToInt () {
         return (int)mValue;
+    }
+
+    public long ToLong () {
+        return (long)mValue;
     }
 
     public new string ToString () {

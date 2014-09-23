@@ -12,8 +12,8 @@ public class SpTypeManager : SpProtoParserListener {
 
 	public SpTypeManager () {
 		mTypeInteger = new SpType ("integer", null);
-		mTypeString = new SpType ("boolean", null);
-		mTypeBoolean = new SpType ("string", null);
+		mTypeBoolean = new SpType ("boolean", null);
+        mTypeString = new SpType ("string", null);
 
 		OnNewType (mTypeInteger);
 		OnNewType (mTypeString);
