@@ -131,7 +131,7 @@ public class SpCodec {
                             return false;
 
                         long obj_end = mStream.Position;
-                        obj_size = (int)(obj_end - obj_begin);
+                        obj_size = (int)(obj_end - obj_begin - 4);
                         mStream.Position = obj_begin;
                         mWriter.Write (obj_size);
                         mStream.Position = obj_end;
@@ -280,9 +280,15 @@ public class SpCodec {
 					// unknown type
 					mReader.ReadBytes (size);
 				}
-				else {
-					// TODO : nest type array
-					mReader.ReadBytes (size);
+                else {
+                    SpObject arr = new SpObject ();
+                    while (size > 0) {
+                        int obj_len = mReader.ReadInt32 ();
+                        size -= 4;
+                        arr.Append (Decode (f.Type));
+                        size -= obj_len;
+                    }
+                    obj.Insert (f.Name, arr);
 				}
 			}
 			else {
