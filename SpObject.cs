@@ -139,41 +139,9 @@ public class SpObject {
         return (List<SpObject>)mValue;
     }
 
-	public bool Match (SpObject obj) {
-		return true;
-	}
-    
-	public string Dump() {
-		return Dump (0);
-	}
-
-	private string Dump(int tab) {
-        string str = "";
-
-        if (IsTable ()) {
-            str = GetTab (tab) + "<table>\n";
-            foreach (KeyValuePair<string, SpObject> entry in (Dictionary<string, SpObject>)mValue) {
-                str += GetTab (tab + 1) + "<key : " + entry.Key + ">\n";
-                str += entry.Value.Dump (tab + 1);
-            }
-        }
-        else if (IsArray ()) {
-            str = GetTab (tab) + "<array>\n";
-            foreach (SpObject obj in (List<SpObject>)mValue) {
-                str += obj.Dump (tab + 1);
-            }
-        }
-        else if (IsBuildinType ()) {
-            str = GetTab (tab) + mValue.ToString () + "\n";
-        }
-
-        return str;
+    public Dictionary<string, SpObject> ToTable () {
+        return (Dictionary<string, SpObject>)mValue;
     }
 
-	private static string GetTab(int n) {
-		string str = "";
-		for (int i = 0; i < n; i++)
-			str += "\t";
-		return str;
-	}
+    public object Value { get { return mValue; } }
 }
