@@ -98,7 +98,76 @@ public class SpPacker {
     }
 
     public static bool Unpack (Stream input, Stream output) {
-        input.CopyTo (output);
-        return true;
+		int size = 0;
+		
+		int src_size = (int)input.Length;
+		byte[] src = new byte[src_size];
+		input.Read (src, 0, src_size);
+		int dest_size = src_size ;
+		byte[] dest = new byte[dest_size];
+
+		int src_offset = 0;
+		int dest_offset = 0;
+		while (src_offset < src_size) {
+			byte header = src[src_offset];
+			src_offset++;
+
+			if (header == 0xff) {
+				if (src_offset >= src_size)
+					return false;
+
+				int n = (src[src_offset] + 1) * 8;
+				if (src_size - src_offset < n + 1)
+					return false;
+
+				if (dest_size < n) {
+					output.Write (dest, 0, dest_offset);
+					dest = new byte[n + 1];
+					dest_offset = 0;
+				}
+
+				if (dest_size - dest_offset < n + 1) {
+					output.Write (dest, 0, dest_offset);
+					dest_offset = 0;
+				}
+
+				src_offset++;
+				Array.Copy (src, src_offset, dest, dest_offset, n);
+				src_offset += n;
+				dest_offset += n;
+				size += n;
+
+			}
+			else {
+				for (int i = 0; i < 8; i++) {
+					int nz = (header >> i) & 1;
+					if (nz != 0) {
+						if (src_offset >= src_size)
+							return false;
+
+						if (dest_offset < dest_size) {
+							dest[dest_offset] = src[src_offset];
+							dest_offset++;
+						}
+						src_offset++;
+					}
+					else {
+						if (dest_offset < dest_size) {
+							dest[dest_offset] = 0;
+							dest_offset++;
+						}
+					}
+
+					if (dest_size == dest_offset) {
+						output.Write (dest, 0, dest_offset);
+						dest_offset = 0;
+					}
+					size++;
+				}
+			}
+		}
+		
+		output.Write (dest, 0, dest_offset);
+		return true;
     }
 }
