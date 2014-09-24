@@ -89,10 +89,10 @@ public class SpRpc {
 
         int session = 0;
         if (header.Get ("session") != null)
-            session = header.Get ("session").ToInt ();
+            session = header.Get ("session").AsInt ();
 
         if (header.Get ("type") != null) {
-            SpProtocol protocol = SpTypeManager.Instance.GetProtocolByTag (header.Get ("type").ToInt ());
+            SpProtocol protocol = SpTypeManager.Instance.GetProtocolByTag (header.Get ("type").AsInt ());
             if (session != 0) {
                 mSessions[session] = protocol.Response;
             }

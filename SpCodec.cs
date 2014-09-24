@@ -30,9 +30,6 @@ public class SpCodec {
         if (mWriter == null)
             return false;
 
-        if (obj.Value == null)
-            return false;
-
         // buildin type decoding should not be here
         if (SpTypeManager.IsBuildinType (type))
             return false;
@@ -65,12 +62,12 @@ public class SpCodec {
             bool standalone = true;
             if (f.IsArray == false) {
                 if (f.Type == SpTypeManager.Instance.Boolean) {
-                    int value = o.ToBoolean () ? 1 : 0;
+                    int value = o.AsBoolean () ? 1 : 0;
                     mWriter.Write ((short)((value + 1) * 2));
                     standalone = false;
                 }
                 else if (f.Type == SpTypeManager.Instance.Integer) {
-                    int value = o.ToInt ();
+                    int value = o.AsInt ();
                     if (value >= 0 && value < 0x7fff) {
                         mWriter.Write ((short)((value + 1) * 2));
                         standalone = false;
@@ -95,7 +92,7 @@ public class SpCodec {
 
                 if (entry.Value == SpTypeManager.Instance.Integer) {
                     byte len = 4;
-                    foreach (SpObject o in entry.Key.ToArray ()) {
+                    foreach (SpObject o in entry.Key.AsArray ()) {
                         if (o.IsLong ()) {
                             len = 8;
                             break;
@@ -103,29 +100,29 @@ public class SpCodec {
                     }
 
                     mWriter.Write (len);
-                    foreach (SpObject o in entry.Key.ToArray ()) {
+                    foreach (SpObject o in entry.Key.AsArray ()) {
                         if (len == 4) {
-                            mWriter.Write (o.ToInt ());
+                            mWriter.Write (o.AsInt ());
                         }
                         else {
-                            mWriter.Write (o.ToLong ());
+                            mWriter.Write (o.AsLong ());
                         }
                     }
                 }
                 else if (entry.Value == SpTypeManager.Instance.Boolean) {
-                    foreach (SpObject o in entry.Key.ToArray ()) {
-                         mWriter.Write ((byte)(o.ToBoolean () ? 1 : 0));
+                    foreach (SpObject o in entry.Key.AsArray ()) {
+                         mWriter.Write ((byte)(o.AsBoolean () ? 1 : 0));
                     }
                 }
                 else if (entry.Value == SpTypeManager.Instance.String) {
-                    foreach (SpObject o in entry.Key.ToArray ()) {
-                        byte[] b = Encoding.UTF8.GetBytes (o.ToString ());
+                    foreach (SpObject o in entry.Key.AsArray ()) {
+                        byte[] b = Encoding.UTF8.GetBytes (o.AsString ());
                         mWriter.Write (b.Length);
                         mWriter.Write (b, 0, b.Length);
                     }
                 }
                 else {
-                    foreach (SpObject o in entry.Key.ToArray ()) {
+                    foreach (SpObject o in entry.Key.AsArray ()) {
                         long obj_begin = mStream.Position;
                         int obj_size = 0;
                         mWriter.Write (obj_size);
@@ -149,17 +146,17 @@ public class SpCodec {
             }
             else {
                 if (entry.Key.IsString ()) {
-                    byte[] b = Encoding.UTF8.GetBytes (entry.Key.ToString ());
+                    byte[] b = Encoding.UTF8.GetBytes (entry.Key.AsString ());
                     mWriter.Write (b.Length);
                     mWriter.Write (b, 0, b.Length);
                 }
                 else if (entry.Key.IsInt ()) {
                     mWriter.Write ((int)4);
-                    mWriter.Write (entry.Key.ToInt ());
+                    mWriter.Write (entry.Key.AsInt ());
                 }
                 else if (entry.Key.IsLong ()) {
                     mWriter.Write ((int)8);
-                    mWriter.Write (entry.Key.ToLong ());
+                    mWriter.Write (entry.Key.AsLong ());
                 }
                 else if (entry.Key.IsBoolean ()) {
                     // boolean should not be here

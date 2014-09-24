@@ -4,76 +4,18 @@ using System;
 public class SpObject {
 	private object mValue;
 
-    public SpObject () {
-    }
-
-	public SpObject (long l) {
-		mValue = l;
-	}
-
-    public SpObject (int i) {
-        mValue = i;
-    }
-
-    public SpObject (bool b) {
-        mValue = b;
-    }
-
-	public SpObject (string s) {
-        mValue = s;
-	}
-
-    public SpObject Get (string key) {
-        if (IsTable ()) {
-            Dictionary<string, SpObject> t = (Dictionary<string, SpObject>)mValue;
-            if (t.ContainsKey (key))
-                return t[key];
+    public SpObject (params object[] args) {
+        if (args.Length == 0) {
+            mValue = null;
         }
-        return null;
-    }
-
-    public void Insert (string key, SpObject obj) {
-        if (mValue == null || mValue.GetType () != typeof (Dictionary<string, SpObject>))
-            mValue = new Dictionary<string, SpObject> ();
-        ((Dictionary<string, SpObject>)mValue)[key] = obj;
-	}
-	
-	public void Insert (string key, long value) {
-		Insert (key, new SpObject (value));
-	}
-
-    public void Insert (string key, int value) {
-        Insert (key, new SpObject (value));
-    }
-
-    public void Insert (string key, bool value) {
-        Insert (key, new SpObject (value));
-    }
-
-    public void Insert (string key, string value) {
-        Insert (key, new SpObject (value));
-    }
-
-    public void Append (SpObject obj) {
-        if (mValue == null || mValue.GetType () != typeof (List<SpObject>))
-            mValue = new List<SpObject> ();
-        ((List<SpObject>)mValue).Add (obj);
-    }
-
-	public void Append (long value) {
-		Append (new SpObject (value));
-	}
-
-    public void Append (int value) {
-        Append (new SpObject (value));
-    }
-
-    public void Append (bool value) {
-        Append (new SpObject (value));
-    }
-
-    public void Append (string value) {
-        Append (new SpObject (value));
+        else if (args.Length == 1) {
+            mValue = args[0];
+        }
+        else {
+            foreach (object arg in args) {
+                Append (arg);
+            }
+        }
     }
 
     public bool IsTable () {
@@ -82,16 +24,58 @@ public class SpObject {
         return (mValue.GetType () == typeof (Dictionary<string, SpObject>));
     }
 
+    public Dictionary<string, SpObject> AsTable () {
+        return (Dictionary<string, SpObject>)mValue;
+    }
+
+    public SpObject Get (string key) {
+        if (IsTable ()) {
+            if (AsTable ().ContainsKey (key))
+                return AsTable ()[key];
+        }
+        return null;
+    }
+
+    public void Insert (string key, SpObject obj) {
+        if (IsTable () == false)
+            mValue = new Dictionary<string, SpObject> ();
+        AsTable ()[key] = obj;
+	}
+	
+	public void Insert (string key, object value) {
+		Insert (key, new SpObject (value));
+	}
+
     public bool IsArray () {
         if (mValue == null)
             return false;
         return (mValue.GetType () == typeof (List<SpObject>));
     }
 
+    public List<SpObject> AsArray () {
+        return (List<SpObject>)mValue;
+    }
+
+    public void Append (SpObject obj) {
+        if (IsArray () == false)
+            mValue = new List<SpObject> ();
+        AsArray ().Add (obj);
+    }
+
+	public void Append (object value) {
+		Append (new SpObject (value));
+	}
+
     public bool IsLong () {
         if (mValue == null)
             return false;
         return (mValue.GetType () == typeof (long));
+    }
+
+    public long AsLong () {
+        if (IsLong ())
+            return (long)mValue;
+        return Convert.ToInt64 (mValue);
     }
 
     public bool IsInt () {
@@ -100,10 +84,18 @@ public class SpObject {
         return (mValue.GetType () == typeof (int));
     }
 
+    public int AsInt () {
+        return (int)mValue;
+    }
+
     public bool IsBoolean () {
         if (mValue == null)
             return false;
         return (mValue.GetType () == typeof (bool));
+    }
+
+    public bool AsBoolean () {
+        return (bool)mValue;
     }
 
     public bool IsString () {
@@ -112,35 +104,12 @@ public class SpObject {
         return (mValue.GetType () == typeof (string));
     }
 
-    public bool IsBuildinType () {
-        return (IsLong () || IsInt () || IsBoolean () || IsString ());
-    }
-
-    public bool ToBoolean () {
-        return (bool)mValue;
-    }
-
-    public int ToInt () {
-        return (int)mValue;
-    }
-
-    public long ToLong () {
-        if (IsLong ())
-            return (long)mValue;
-
-        return Convert.ToInt64 (mValue);
-    }
-
-    public new string ToString () {
+    public string AsString () {
         return (string)mValue;
     }
 
-    public List<SpObject> ToArray () {
-        return (List<SpObject>)mValue;
-    }
-
-    public Dictionary<string, SpObject> ToTable () {
-        return (Dictionary<string, SpObject>)mValue;
+    public bool IsBuildinType () {
+        return (IsLong () || IsInt () || IsBoolean () || IsString ());
     }
 
     public object Value { get { return mValue; } }
