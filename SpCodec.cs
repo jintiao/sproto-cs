@@ -202,7 +202,7 @@ public class SpCodec {
 
 		short fn = mReader.ReadInt16 ();
 		for (short i = 0; i < fn; i++) {
-			int value = (int)mReader.ReadInt16 ();
+            int value = (int)mReader.ReadUInt16 ();
 
 			if (value == 0) {
 				tags.Add (current_tag);
