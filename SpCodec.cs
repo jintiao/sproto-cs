@@ -47,7 +47,7 @@ public class SpCodec {
             if (f == null)
                 return false;
 
-            SpObject o = obj.Get (f.Name);
+            SpObject o = obj[f.Name];
             if (o == null || IsTypeMatch (f, o) == false)
                 continue;
 

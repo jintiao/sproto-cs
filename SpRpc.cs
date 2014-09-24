@@ -88,11 +88,11 @@ public class SpRpc {
         SpObject header = SpCodec.Decode (mHeaderType, unpack_stream);
 
         int session = 0;
-        if (header.Get ("session") != null)
-            session = header.Get ("session").AsInt ();
+        if (header["session"] != null)
+            session = header["session"].AsInt ();
 
-        if (header.Get ("type") != null) {
-            SpProtocol protocol = SpTypeManager.Instance.GetProtocolByTag (header.Get ("type").AsInt ());
+        if (header["type"] != null) {
+            SpProtocol protocol = SpTypeManager.Instance.GetProtocolByTag (header["type"].AsInt ());
             if (session != 0) {
                 mSessions[session] = protocol.Response;
             }

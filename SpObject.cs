@@ -2,20 +2,34 @@
 using System;
 
 public class SpObject {
+	public enum ArgType {
+		Table,
+		Array,
+	}
+
 	private object mValue;
 
-    public SpObject (params object[] args) {
-        if (args.Length == 0) {
-            mValue = null;
-        }
-        else if (args.Length == 1) {
-            mValue = args[0];
-        }
-        else {
-            foreach (object arg in args) {
-                Append (arg);
-            }
-        }
+	public SpObject () {
+		mValue = null;
+	}
+
+	public SpObject (object arg) {
+		mValue = arg;
+	}
+
+	public SpObject (ArgType type, params object[] args) {
+		switch (type) {
+		case ArgType.Array:
+			foreach (object arg in args) {
+				Append (arg);
+			}
+			break;
+		case ArgType.Table:
+			for (int i = 0; i < args.Length; i += 2) {
+				Insert ((string)args[i], args[i + 1]);
+			}
+			break;
+		}
     }
 
     public bool IsTable () {
@@ -28,14 +42,6 @@ public class SpObject {
         return (Dictionary<string, SpObject>)mValue;
     }
 
-    public SpObject Get (string key) {
-        if (IsTable ()) {
-            if (AsTable ().ContainsKey (key))
-                return AsTable ()[key];
-        }
-        return null;
-    }
-
     public void Insert (string key, SpObject obj) {
         if (IsTable () == false)
             mValue = new Dictionary<string, SpObject> ();
@@ -43,7 +49,10 @@ public class SpObject {
 	}
 	
 	public void Insert (string key, object value) {
-		Insert (key, new SpObject (value));
+		if (value.GetType () == typeof (SpObject))
+			Insert (key, (SpObject)value);
+		else
+			Insert (key, new SpObject (value));
 	}
 
     public bool IsArray () {
@@ -63,7 +72,10 @@ public class SpObject {
     }
 
 	public void Append (object value) {
-		Append (new SpObject (value));
+		if (value.GetType () == typeof (SpObject))
+			Append ((SpObject)value);
+		else
+			Append (new SpObject (value));
 	}
 
     public bool IsLong () {
@@ -113,4 +125,46 @@ public class SpObject {
     }
 
     public object Value { get { return mValue; } }
+
+	public SpObject this[string key] {
+		get {
+			if (IsTable () == false)
+				return null;
+			Dictionary<string, SpObject> t = AsTable ();
+			if (t.ContainsKey (key) == false)
+				return null;
+			return t[key];
+		}
+		set {
+			if (IsTable () == false)
+				return;
+			Dictionary<string, SpObject> t = AsTable ();
+			t[key] = value;
+		}
+	}
+
+	public SpObject this[int index] {
+		get {
+			if (IsArray () == false)
+				return null;
+
+			if (index < 0)
+				return null;
+
+			if (AsArray ().Count <= index)
+				return null;
+			return AsArray ()[index];
+		}
+		set {
+			if (IsArray () == false)
+				return;
+			
+			if (index < 0)
+				return;
+
+			if (AsArray ().Count <= index)
+				return;
+			AsArray ()[index] = value;
+		}
+	}
 }
