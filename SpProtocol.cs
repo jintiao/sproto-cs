@@ -3,7 +3,8 @@
 public class SpProtocol {
     public string Name;
     public int Tag;
-    public Dictionary<string, SpType> mTypes = new Dictionary<string, SpType> ();
+    public SpType Request;
+    public SpType Response;
 
     public SpProtocol (string name, int tag) {
         Name = name;
@@ -11,6 +12,9 @@ public class SpProtocol {
     }
 
     public void AddType (SpType type) {
-        mTypes.Add (type.Name, type);
+        if (type.Name.Equals (Name + ".request"))
+            Request = type;
+        else if (type.Name.Equals (Name + ".response"))
+            Response = type;
     }
 }

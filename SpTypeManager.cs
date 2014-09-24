@@ -5,6 +5,8 @@ public class SpTypeManager : SpProtoParserListener {
 	private static SpTypeManager sInstance = new SpTypeManager ();
 
     private Dictionary<string, SpProtocol> mProtocols = new Dictionary<string, SpProtocol> ();
+    private Dictionary<int, SpProtocol> mProtocolsByTag = new Dictionary<int, SpProtocol> ();
+
 	private Dictionary<string, SpType> mTypes = new Dictionary<string, SpType> ();
 	private Dictionary<string, SpType> mIncompleteTypes = new Dictionary<string, SpType> ();
 	private SpType mTypeInteger;
@@ -30,11 +32,26 @@ public class SpTypeManager : SpProtoParserListener {
 
     public void OnNewProtocol (SpProtocol protocol) {
         mProtocols.Add (protocol.Name, protocol);
+        mProtocolsByTag.Add (protocol.Tag, protocol);
     }
 
 	private bool IsTypeComplete (SpType type) {
 		return type.CheckAndUpdate ();
 	}
+
+    public SpProtocol GetProtocolByName (string name) {
+        if (mProtocols.ContainsKey (name)) {
+            return mProtocols[name];
+        }
+        return null;
+    }
+
+    public SpProtocol GetProtocolByTag (int tag) {
+        if (mProtocolsByTag.ContainsKey (tag)) {
+            return mProtocolsByTag[tag];
+        }
+        return null;
+    }
 
 	public SpType GetType (string name) {
 		if (mTypes.ContainsKey (name)) {

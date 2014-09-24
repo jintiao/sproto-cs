@@ -30,6 +30,9 @@ public class SpCodec {
         if (mWriter == null)
             return false;
 
+        if (obj.Value == null)
+            return false;
+
         // buildin type decoding should not be here
         if (SpTypeManager.IsBuildinType (type))
             return false;
@@ -355,20 +358,26 @@ public class SpCodec {
     }
 
     public static bool Encode (string proto, SpObject obj, Stream stream) {
-		SpType type = SpTypeManager.Instance.GetType (proto);
-		if (type == null || stream == null)
-			return false;
-
-		SpCodec codec = new SpCodec (stream, SpCodecMode.Write);
-		return codec.Encode (type, obj);
+        return Encode (SpTypeManager.Instance.GetType (proto), obj, stream);
 	}
+
+    public static bool Encode (SpType type, SpObject obj, Stream stream) {
+        if (type == null || obj == null|| stream == null)
+            return false;
+
+        SpCodec codec = new SpCodec (stream, SpCodecMode.Write);
+        return codec.Encode (type, obj);
+    }
 
 	public static SpObject Decode (string proto, Stream stream) {
-		SpType type = SpTypeManager.Instance.GetType (proto);
-		if (type == null || stream == null)
-			return null;
-
-		SpCodec codec = new SpCodec (stream, SpCodecMode.Read);
-		return codec.Decode (type);
+        return Decode (SpTypeManager.Instance.GetType (proto), stream);
 	}
+
+    public static SpObject Decode (SpType type, Stream stream) {
+        if (type == null || stream == null)
+            return null;
+
+        SpCodec codec = new SpCodec (stream, SpCodecMode.Read);
+        return codec.Decode (type);
+    }
 }
