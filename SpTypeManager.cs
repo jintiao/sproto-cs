@@ -4,6 +4,7 @@ using System.IO;
 public class SpTypeManager : SpProtoParserListener {
 	private static SpTypeManager sInstance = new SpTypeManager ();
 
+    private Dictionary<string, SpProtocol> mProtocols = new Dictionary<string, SpProtocol> ();
 	private Dictionary<string, SpType> mTypes = new Dictionary<string, SpType> ();
 	private Dictionary<string, SpType> mIncompleteTypes = new Dictionary<string, SpType> ();
 	private SpType mTypeInteger;
@@ -11,9 +12,9 @@ public class SpTypeManager : SpProtoParserListener {
 	private SpType mTypeBoolean;
 
 	public SpTypeManager () {
-		mTypeInteger = new SpType ("integer", null);
-		mTypeBoolean = new SpType ("boolean", null);
-        mTypeString = new SpType ("string", null);
+		mTypeInteger = new SpType ("integer");
+		mTypeBoolean = new SpType ("boolean");
+        mTypeString = new SpType ("string");
 
 		OnNewType (mTypeInteger);
 		OnNewType (mTypeString);
@@ -26,6 +27,10 @@ public class SpTypeManager : SpProtoParserListener {
 		else
 			mIncompleteTypes.Add (type.Name, type);
 	}
+
+    public void OnNewProtocol (SpProtocol protocol) {
+        mProtocols.Add (protocol.Name, protocol);
+    }
 
 	private bool IsTypeComplete (SpType type) {
 		return type.CheckAndUpdate ();

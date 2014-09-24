@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 
 public interface SpProtoParserListener {
 	void OnNewType(SpType type);
+    void OnNewProtocol (SpProtocol protocol);
 }
 
 public class SpProtoParser {
@@ -12,14 +13,22 @@ public class SpProtoParser {
 	private static char[] sDelimiters = new char[] {'{', '}', '\n'};
 	private static char[] sSpace = new char[] {' ', '\t', '\n'};
 
+    private SpProtocol mCurrentProtocol;
+    private SpType mCurrentType;
+    private SpType mLastType;
+
 	public SpProtoParser (SpProtoParserListener linstener) {
 		mListener = linstener;
 	}
 
 	public void Parse (Stream stream) {
+        mCurrentProtocol = null;
+        mCurrentType = null;
+        mLastType = null;
+
 		string str = ReadAll (stream);
 		str = PreProcess (str);
-		Scan (str, 0, null);
+		Scan (str, 0);
 	}
 
 	private string ReadAll (Stream stream) {
@@ -39,50 +48,73 @@ public class SpProtoParser {
 		return str.Replace ("\r", string.Empty).Trim ();
 	}
 
-	private void Scan (string str, int start, SpType scope) {
+	private void Scan (string str, int start) {
 		int pos = str.IndexOfAny (sDelimiters, start);
 		if (pos < 0)
 			return;
 
 		switch (str[pos]) {
 		case '{':
-			string title = str.Substring (start, pos - start);
-			if (IsProtocol (title)) {
+			string title = str.Substring (start, pos - start).Trim ();
+            if (IsProtocol (title)) {
+                mCurrentProtocol = NewProtocol (title);
 			}
 			else {
-				SpType t = NewType (title, scope);
-				scope = t;
+                mLastType = mCurrentType;
+                mCurrentType = NewType (title);
 			}
 			break;
 		case '}':
-			if (scope != null) {
-				mListener.OnNewType (scope);
-				scope = scope.ParentScope;
+            if (mCurrentType != null) {
+                mListener.OnNewType (mCurrentType);
+                if (mCurrentProtocol != null)
+                    mCurrentProtocol.AddType (mCurrentType);
+                mCurrentType = mLastType;
+                mLastType = null;
 			}
+            else if (mCurrentProtocol != null) {
+                mListener.OnNewProtocol (mCurrentProtocol);
+                mCurrentProtocol = null;
+            }
 			break;
 		case '\n':
 			SpField f = NewField (str.Substring(start, pos - start));
-			if (f != null && scope != null) {
-				scope.AddField (f);
+            if (f != null && mCurrentType != null) {
+                mCurrentType.AddField (f);
 			}
 			break;
 		}
 		
 		start = pos + 1;
-		Scan (str, start, scope);
+		Scan (str, start);
 	}
 
 	private bool IsProtocol (string str) {
-		return false;
-		//return (str.IndexOfAny (sSpace) >= 0);
+		return (str.IndexOfAny (sSpace) >= 0);
 	}
 
-	private SpType NewType (string str, SpType scope) {
-		str = str.Trim ();
-		if (str[0] == '.')
-			str = str.Substring (1);
+    private SpProtocol NewProtocol (string str) {
+        string[] words = str.Split (sSpace);
+        if (words.Length != 2)
+            return null;
 
-		SpType t = new SpType (str, scope);
+        SpProtocol protocol = new SpProtocol (words[0], int.Parse (words[1]));
+        return protocol;
+    }
+
+	private SpType NewType (string str) {
+        if (str[0] == '.') {
+            str = str.Substring (1);
+        }
+        else {
+            if (mLastType != null)
+                str = mLastType.Name + "." + str;
+
+            if (mCurrentProtocol != null)
+                str = mCurrentProtocol.Name + "." + str;
+        }
+
+		SpType t = new SpType (str);
 		return t;
 	}
 

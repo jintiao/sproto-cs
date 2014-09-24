@@ -2,18 +2,11 @@
 
 public class SpType {
 	public string Name;
-	public string Fullname;
-	public SpType ParentScope;
 	public Dictionary<int, SpField> Fields = new Dictionary<int, SpField> ();
 	public Dictionary<string, SpField> FieldNames = new Dictionary<string, SpField> ();
 
-	public SpType (string name, SpType scope) {
+	public SpType (string name) {
 		Name = name;
-		if (scope != null)
-			Fullname = scope.Fullname + "." + name;
-		else
-			Fullname = Name;
-		ParentScope = scope;
 	}
 
 	public void AddField (SpField f) {
