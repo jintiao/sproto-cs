@@ -46,12 +46,12 @@ public class SpPacker {
         Array.Copy (src, src_offset, dest, dest_offset + 2, n * 8);
     }
 
-    public static bool Pack (Stream input, Stream output) {
+    public static bool Pack (SpStream input, SpStream output) {
         int size = 0;
 
         int src_size = (int)(((input.Length + 7) / 8) * 8);
         byte[] src = new byte[src_size];
-        input.Read (src, 0, (int)input.Length);
+        input.Read (src);
         int dest_size = (src_size + 2047) / 2048 * 2 + src_size;
         byte[] dest = new byte[dest_size];
 
@@ -97,7 +97,7 @@ public class SpPacker {
         return (size <= dest_size);
     }
 
-    public static bool Unpack (Stream input, Stream output) {
+    public static bool Unpack (SpStream input, SpStream output) {
 		int size = 0;
 		
 		int src_size = (int)input.Length;

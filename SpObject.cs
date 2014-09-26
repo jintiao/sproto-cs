@@ -5,19 +5,45 @@ public class SpObject {
 	public enum ArgType {
 		Table,
 		Array,
+        Boolean,
+        String,
+        Int,
+        Long,
+        Null,
 	}
 
 	private object mValue;
+    private ArgType mType;
 
 	public SpObject () {
 		mValue = null;
+        mType = ArgType.Null;
 	}
 
 	public SpObject (object arg) {
-		mValue = arg;
+        mValue = arg;
+        mType = ArgType.Null;
+
+        if (mValue != null) {
+            Type t = mValue.GetType ();
+            if (t == typeof (long)) {
+                mType = ArgType.Long;
+            }
+            else if (t == typeof (int)) {
+                mType = ArgType.Int;
+            }
+            else if (t == typeof (string)) {
+                mType = ArgType.String;
+            }
+            else if (t == typeof (bool)) {
+                mType = ArgType.Boolean;
+            }
+        }
 	}
 
-	public SpObject (ArgType type, params object[] args) {
+    public SpObject (ArgType type, params object[] args) {
+        mType = ArgType.Null;
+
 		switch (type) {
 		case ArgType.Array:
 			foreach (object arg in args) {
@@ -33,18 +59,18 @@ public class SpObject {
     }
 
     public bool IsTable () {
-        if (mValue == null)
-            return false;
-        return (mValue.GetType () == typeof (Dictionary<string, SpObject>));
+        return (mType == ArgType.Table);
     }
 
     public Dictionary<string, SpObject> AsTable () {
-        return (Dictionary<string, SpObject>)mValue;
+        return mValue as Dictionary<string, SpObject>;
     }
 
     public void Insert (string key, SpObject obj) {
-        if (IsTable () == false)
+        if (IsTable () == false) {
+            mType = ArgType.Table;
             mValue = new Dictionary<string, SpObject> ();
+        }
         AsTable ()[key] = obj;
 	}
 	
@@ -56,18 +82,18 @@ public class SpObject {
 	}
 
     public bool IsArray () {
-        if (mValue == null)
-            return false;
-        return (mValue.GetType () == typeof (List<SpObject>));
+        return (mType == ArgType.Array);
     }
 
     public List<SpObject> AsArray () {
-        return (List<SpObject>)mValue;
+        return mValue as List<SpObject>;
     }
 
     public void Append (SpObject obj) {
-        if (IsArray () == false)
+        if (IsArray () == false) {
+            mType = ArgType.Array;
             mValue = new List<SpObject> ();
+        }
         AsArray ().Add (obj);
     }
 
@@ -79,9 +105,7 @@ public class SpObject {
 	}
 
     public bool IsLong () {
-        if (mValue == null)
-            return false;
-        return (mValue.GetType () == typeof (long));
+        return (mType == ArgType.Long);
     }
 
     public long AsLong () {
@@ -91,9 +115,7 @@ public class SpObject {
     }
 
     public bool IsInt () {
-        if (mValue == null)
-            return false;
-        return (mValue.GetType () == typeof (int));
+        return (mType == ArgType.Int);
     }
 
     public int AsInt () {
@@ -101,9 +123,7 @@ public class SpObject {
     }
 
     public bool IsBoolean () {
-        if (mValue == null)
-            return false;
-        return (mValue.GetType () == typeof (bool));
+        return (mType == ArgType.Boolean);
     }
 
     public bool AsBoolean () {
@@ -111,13 +131,11 @@ public class SpObject {
     }
 
     public bool IsString () {
-        if (mValue == null)
-            return false;
-        return (mValue.GetType () == typeof (string));
+        return (mType == ArgType.String);
     }
 
     public string AsString () {
-        return (string)mValue;
+        return mValue as string;
     }
 
     public bool IsBuildinType () {
@@ -151,9 +169,10 @@ public class SpObject {
 			if (index < 0)
 				return null;
 
-			if (AsArray ().Count <= index)
+            List<SpObject> a = AsArray ();
+			if (a.Count <= index)
 				return null;
-			return AsArray ()[index];
+			return a[index];
 		}
 		set {
 			if (IsArray () == false)
@@ -162,9 +181,10 @@ public class SpObject {
 			if (index < 0)
 				return;
 
-			if (AsArray ().Count <= index)
+            List<SpObject> a = AsArray ();
+			if (a.Count <= index)
 				return;
-			AsArray ()[index] = value;
+			a[index] = value;
 		}
 	}
 }
