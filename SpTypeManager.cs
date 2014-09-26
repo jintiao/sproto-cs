@@ -24,13 +24,19 @@ public class SpTypeManager : SpProtoParserListener {
 	}
 
 	public void OnNewType (SpType type) {
+		if (GetType (type.Name) != null)
+			return;
+
 		if (IsTypeComplete (type))
 			mTypes.Add (type.Name, type);
 		else
 			mIncompleteTypes.Add (type.Name, type);
 	}
 
-    public void OnNewProtocol (SpProtocol protocol) {
+	public void OnNewProtocol (SpProtocol protocol) {
+		if (GetProtocolByName (protocol.Name) != null)
+			return;
+
         mProtocols.Add (protocol.Name, protocol);
         mProtocolsByTag.Add (protocol.Tag, protocol);
     }
@@ -92,6 +98,10 @@ public class SpTypeManager : SpProtoParserListener {
 
 	public static void Import (Stream stream) {
 		new SpProtoParser (sInstance).Parse (stream);
+	}
+
+	public static void Import (string proto) {
+		new SpProtoParser (sInstance).Parse (proto);
 	}
 
     public static bool IsBuildinType (string type) {

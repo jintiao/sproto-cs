@@ -22,11 +22,14 @@ public class SpProtoParser {
 	}
 
 	public void Parse (Stream stream) {
-        mCurrentProtocol = null;
-        mCurrentType = null;
-        mLastType = null;
+		Parse (ReadAll (stream));
+	}
 
-		string str = ReadAll (stream);
+	public void Parse (string str) {
+		mCurrentProtocol = null;
+		mCurrentType = null;
+		mLastType = null;
+
 		str = PreProcess (str);
 		Scan (str, 0);
 	}
@@ -45,6 +48,7 @@ public class SpProtoParser {
 	}
 
 	private string PreProcess (string str) {
+		// TODO : trim comment
 		return str.Replace ("\r", string.Empty).Trim ();
 	}
 
