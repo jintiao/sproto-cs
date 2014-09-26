@@ -102,7 +102,7 @@ public class SpPacker {
 		
 		int src_size = (int)input.Length;
 		byte[] src = new byte[src_size];
-		input.Read (src, 0, src_size);
+		input.Read (src);
 		int dest_size = src_size ;
 		byte[] dest = new byte[dest_size];
 

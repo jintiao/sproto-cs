@@ -24,15 +24,15 @@ public class SpRpc {
         mHeaderType = header;
     }
 
-    public Stream Request (string proto) {
+	public SpStream Request (string proto) {
         return Request (proto, null);
     }
 
-    public Stream Request (string proto, SpObject args) {
+	public SpStream Request (string proto, SpObject args) {
         return Request (proto, args, 0);
     }
 
-    public Stream Request (string proto, SpObject args, int session) {
+    public SpStream Request (string proto, SpObject args, int session) {
         SpProtocol protocol = SpTypeManager.Instance.GetProtocolByName (proto);
         if (protocol == null)
             return null;
@@ -42,7 +42,7 @@ public class SpRpc {
         if (session != 0)
             header.Insert ("session", session);
 
-        MemoryStream encode_stream = new MemoryStream ();
+        SpStream encode_stream = new SpStream ();
         SpCodec.Encode (mHeaderType, header, encode_stream);
 
         if (session != 0) {
@@ -53,7 +53,7 @@ public class SpRpc {
             SpCodec.Encode (protocol.Request, args, encode_stream);
         }
 
-        MemoryStream pack_stream = new MemoryStream ();
+        SpStream pack_stream = new SpStream ();
         encode_stream.Position = 0;
         SpPacker.Pack (encode_stream, pack_stream);
 
@@ -61,18 +61,18 @@ public class SpRpc {
         return pack_stream;
     }
 
-    public Stream Response (int session, SpObject args) {
+	public SpStream Response (int session, SpObject args) {
         SpObject header = new SpObject ();
         header.Insert ("session", session);
 
-        MemoryStream encode_stream = new MemoryStream ();
+        SpStream encode_stream = new SpStream ();
         SpCodec.Encode (mHeaderType, header, encode_stream);
 
         if (session != 0 && mSessions.ContainsKey (session)) {
             SpCodec.Encode (mSessions[session], args, encode_stream);
         }
 
-        MemoryStream pack_stream = new MemoryStream ();
+        SpStream pack_stream = new SpStream ();
         encode_stream.Position = 0;
         SpPacker.Pack (encode_stream, pack_stream);
 
@@ -80,8 +80,8 @@ public class SpRpc {
         return pack_stream;
     }
 
-    public SpRpcDispatchInfo Dispatch (Stream stream) {
-        MemoryStream unpack_stream = new MemoryStream ();
+	public SpRpcDispatchInfo Dispatch (SpStream stream) {
+        SpStream unpack_stream = new SpStream ();
         SpPacker.Unpack (stream, unpack_stream);
 
         unpack_stream.Position = 0;

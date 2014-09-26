@@ -9,7 +9,7 @@ public class SpStream {
     private int mTail;
 
     public SpStream ()
-        : this (64) {
+        : this (4096) {
     }
 
     public SpStream (int len)
@@ -138,5 +138,5 @@ public class SpStream {
         set { mPosition = value; }
     }
 
-    public int Length { get { return mLength; } }
+	public int Length { get { return mTail - mOffset; } }
 }
