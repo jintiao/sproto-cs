@@ -140,7 +140,7 @@ public class SpPacker {
 	}
 
     public static bool Unpack (SpStream input, SpStream output) {
-		int src_size = input.Length;
+		int src_size = input.Tail;
 		int src_offset = input.Offset;
 		byte[] src = input.Buffer;
 

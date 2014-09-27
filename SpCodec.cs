@@ -4,7 +4,7 @@ using System;
 using System.Text;
 
 public class SpCodec {
-	const int MAX_SIZE = 1000000;
+	public const int MAX_SIZE = 1000000;
 
     private SpStream mStream;
 
@@ -12,7 +12,7 @@ public class SpCodec {
         mStream = stream;
 	}
 
-    public bool Encode (SpType type, SpObject obj) {
+    private bool EncodeInternal (SpType type, SpObject obj) {
         if (mStream == null || type == null || obj == null)
             return false;
 
@@ -113,7 +113,7 @@ public class SpCodec {
                         int obj_size = 0;
                         mStream.Write (obj_size);
 
-                        if (Encode (entry.Value, o) == false)
+						if (EncodeInternal (entry.Value, o) == false)
                             return false;
 
                         int obj_end = mStream.Position;
@@ -153,7 +153,7 @@ public class SpCodec {
                     int obj_size = 0;
                     mStream.Write (obj_size);
 
-                    if (Encode (entry.Value, entry.Key) == false)
+					if (EncodeInternal (entry.Value, entry.Key) == false)
                         return false;
 
                     int obj_end = mStream.Position;
@@ -340,26 +340,8 @@ public class SpCodec {
         return false;
     }
 
-    public static SpStream Encode (string proto, SpObject obj) {
-        SpStream stream = new SpStream ();
-
-        if (Encode (proto, obj, stream) == false) {
-            if (stream.IsOverflow ()) {
-				if (stream.Position > MAX_SIZE)
-					return null;
-				
-				int size = stream.Position;
-				size = ((size + 7) / 8) * 8;
-                stream = new SpStream (size);
-				if (Encode (proto, obj, stream) == false)
-					return null;
-            }
-            else {
-                return null;
-            }
-        }
-
-        return stream;
+	public static SpStream Encode (string proto, SpObject obj) {
+		return Encode (SpTypeManager.Instance.GetType (proto), obj);
     }
 
     public static bool Encode (string proto, SpObject obj, byte[] buffer) {
@@ -374,12 +356,34 @@ public class SpCodec {
         return Encode (SpTypeManager.Instance.GetType (proto), obj, stream);
     }
 
+	public static SpStream Encode (SpType type, SpObject obj) {
+		SpStream stream = new SpStream ();
+		
+		if (Encode (type, obj, stream) == false) {
+			if (stream.IsOverflow ()) {
+				if (stream.Position > MAX_SIZE)
+					return null;
+				
+				int size = stream.Position;
+				size = ((size + 7) / 8) * 8;
+				stream = new SpStream (size);
+				if (Encode (type, obj, stream) == false)
+					return null;
+			}
+			else {
+				return null;
+			}
+		}
+		
+		return stream;
+	}
+
     public static bool Encode (SpType type, SpObject obj, SpStream stream) {
         if (type == null || obj == null || stream == null)
             return false;
 
         SpCodec codec = new SpCodec (stream);
-        bool success = codec.Encode (type, obj);
+		bool success = codec.EncodeInternal (type, obj);
 		return (success && stream.IsOverflow () == false);
     }
 

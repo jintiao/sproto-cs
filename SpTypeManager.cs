@@ -34,7 +34,7 @@ public class SpTypeManager : SpProtoParserListener {
 	}
 
 	public void OnNewProtocol (SpProtocol protocol) {
-		if (GetProtocolByName (protocol.Name) != null)
+		if (GetProtocolByName (protocol.Name) != null || GetProtocolByTag (protocol.Tag) != null)
 			return;
 
         mProtocols.Add (protocol.Name, protocol);

@@ -21,14 +21,27 @@ public class SpStream {
     public SpStream (byte[] b) 
         : this (b, 0, b.Length) {
     }
-
-    public SpStream (byte[] b, int o, int c) {
+	
+	public SpStream (byte[] b, int o, int c)
+		: this (b, 0, b.Length, -1) {
+	}
+	
+	public SpStream (byte[] b, int o, int c, int t) {
         mBuffer = b;
         mLength = o + c;
         mOffset = o;
         mPosition = mOffset;
-        mTail = mPosition;
+
+		if (t >= 0)
+        	mTail = o + t;
+		else 
+			mTail = mPosition;
     }
+
+	public void Reset () {
+		mPosition = mOffset;
+		mTail = mPosition;
+	}
 
     public bool IsOverflow () {
         return (mPosition > mLength);
@@ -164,6 +177,7 @@ public class SpStream {
 	
 	public int Offset { get { return mOffset; } }
 	public int Length { get { return mTail - mOffset; } }
+	public int Available { get { return mLength - mPosition; } }
 	public int Capacity { get { return mLength; } }
 	public int Tail { get { return mTail; } }
 	public byte[] Buffer { get { return mBuffer; } }
