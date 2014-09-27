@@ -104,13 +104,9 @@ public class SpTypeManager : SpProtoParserListener {
 		new SpProtoParser (sInstance).Parse (proto);
 	}
 
-    public static bool IsBuildinType (string type) {
-        if (type.Equals ("integer") || type.Equals ("boolean") || type.Equals ("string"))
-            return true;
-        return false;
-    }
-
 	public static bool IsBuildinType (SpType type) {
-		return IsBuildinType (type.Name);
+		if (type == sInstance.mTypeInteger || type == sInstance.mTypeBoolean || type == sInstance.mTypeString)
+			return true;
+		return false;
 	}
 }

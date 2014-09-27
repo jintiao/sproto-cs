@@ -101,7 +101,9 @@ public class SpRpc {
             return new SpRpcDispatchInfo (session, protocol.Request, obj);
         }
 
-        SpType response = mSessions[session];
+		SpType response = null;
+		if (mSessions.ContainsKey (session))
+			response = mSessions[session];
         SpObject response_obj = null; ;
         if (response != null) {
             response_obj = SpCodec.Decode (response, unpack_stream);

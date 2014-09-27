@@ -138,10 +138,6 @@ public class SpObject {
         return mValue as string;
     }
 
-    public bool IsBuildinType () {
-        return (IsLong () || IsInt () || IsBoolean () || IsString ());
-    }
-
     public object Value { get { return mValue; } }
 
 	public SpObject this[string key] {

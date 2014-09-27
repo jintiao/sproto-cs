@@ -90,48 +90,68 @@ public class SpStream {
         return length;
     }
 
-    public void Write (short n) {
-        Write (BitConverter.GetBytes (n));
+	public void Write (short n) {
+		if (CanWrite (2)) {
+			mBuffer[mPosition + 0] = (byte)(n & 0xff);
+			mBuffer[mPosition + 1] = (byte)((n >> 8) & 0xff);
+		}
+		PositionAdd (2);
     }
 
-    public void Write (int n) {
-        Write (BitConverter.GetBytes (n));
+	public void Write (int n) {
+		if (CanWrite (2)) {
+			mBuffer[mPosition + 0] = (byte)(n & 0xff);
+			mBuffer[mPosition + 1] = (byte)((n >> 8) & 0xff);
+			mBuffer[mPosition + 2] = (byte)((n >> 16) & 0xff);
+			mBuffer[mPosition + 3] = (byte)((n >> 24) & 0xff);
+		}
+		PositionAdd (4);
     }
 
-    public void Write (long n) {
-        Write (BitConverter.GetBytes (n));
+	public void Write (long n) {
+		if (CanWrite (2)) {
+			mBuffer[mPosition + 0] = (byte)(n & 0xff);
+			mBuffer[mPosition + 1] = (byte)((n >> 8) & 0xff);
+			mBuffer[mPosition + 2] = (byte)((n >> 16) & 0xff);
+			mBuffer[mPosition + 3] = (byte)((n >> 24) & 0xff);
+			mBuffer[mPosition + 3] = (byte)((n >> 32) & 0xff);
+			mBuffer[mPosition + 3] = (byte)((n >> 40) & 0xff);
+			mBuffer[mPosition + 3] = (byte)((n >> 48) & 0xff);
+			mBuffer[mPosition + 3] = (byte)((n >> 56) & 0xff);
+		}
+		PositionAdd (8);
     }
 
-    public void Write (byte b) {
-        if (mPosition < mLength) {
-            mBuffer[mPosition] = b;
-        }
-        mPosition += 1;
-        if (mPosition > mTail) {
-            mTail = mPosition;
-            if (mTail > mLength)
-                mTail = mLength;
-        }
+	public void Write (byte b) {
+		if (CanWrite (1)) {
+			mBuffer[mPosition] = b;
+		}
+		PositionAdd (1);
     }
 
     public void Write (byte[] bytes) {
         Write (bytes, 0, bytes.Length);
     }
 
-    public void Write (byte[] bytes, int offset, int length) {
-        for (int i = 0; i < length; i++) {
-            if (IsOverflow ())
-                break;
-            mBuffer[mPosition] = bytes[i + offset];
-            mPosition++;
-        }
-
-        if (mPosition > mTail) {
-            mTail = mPosition;
-            if (mTail > mLength)
-                mTail = mLength;
-        }
+	public void Write (byte[] bytes, int offset, int length) {
+		if (CanWrite (length)) {
+			Array.Copy (bytes, offset, mBuffer, mPosition, length);
+		}
+		PositionAdd (length);
     }
+
+	private void PositionAdd (int n) {
+		mPosition += n;
+		if (mPosition > mTail) {
+			mTail = mPosition;
+			if (mTail > mLength)
+				mTail = mLength;
+		}
+	}
+
+	private bool CanWrite (int n) {
+		return (mPosition + n < mLength);
+	}
 
     public int Position { 
         get { return mPosition; }
