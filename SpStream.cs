@@ -143,7 +143,7 @@ public class SpStream {
     }
 
 	// NOTE : mPosition can be larger than mLength, but nothing will be wirten if so.
-	//        using this feature to determine size required by SpCodec.Encode.
+	//        using this feature to determine size required.
 	private void PositionAdd (int n) {
 		mPosition += n;
 		if (mPosition > mTail) {
@@ -161,6 +161,10 @@ public class SpStream {
         get { return mPosition; }
         set { mPosition = value; }
     }
-
+	
+	public int Offset { get { return mOffset; } }
 	public int Length { get { return mTail - mOffset; } }
+	public int Capacity { get { return mLength; } }
+	public int Tail { get { return mTail; } }
+	public byte[] Buffer { get { return mBuffer; } }
 }

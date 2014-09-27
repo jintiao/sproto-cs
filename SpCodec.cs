@@ -347,8 +347,10 @@ public class SpCodec {
             if (stream.IsOverflow ()) {
 				if (stream.Position > MAX_SIZE)
 					return null;
-
-                stream = new SpStream (stream.Position);
+				
+				int size = stream.Position;
+				size = ((size + 7) / 8) * 8;
+                stream = new SpStream (size);
 				if (Encode (proto, obj, stream) == false)
 					return null;
             }
