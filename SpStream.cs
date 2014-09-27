@@ -2,6 +2,8 @@
 using System;
 
 public class SpStream {
+	const int DEFAULT_SIZE = 2050;
+
     private byte[] mBuffer;
     private int mOffset;
     private int mLength;
@@ -9,7 +11,7 @@ public class SpStream {
     private int mTail;
 
     public SpStream ()
-        : this (4096) {
+		: this (DEFAULT_SIZE) {
     }
 
     public SpStream (int len)
@@ -140,6 +142,8 @@ public class SpStream {
 		PositionAdd (length);
     }
 
+	// NOTE : mPosition can be larger than mLength, but nothing will be wirten if so.
+	//        using this feature to determine size required by SpCodec.Encode.
 	private void PositionAdd (int n) {
 		mPosition += n;
 		if (mPosition > mTail) {

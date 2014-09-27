@@ -4,6 +4,8 @@ using System;
 using System.Text;
 
 public class SpCodec {
+	const int MAX_SIZE = 1000000;
+
     private SpStream mStream;
 
     public SpCodec (SpStream stream) {
@@ -168,7 +170,7 @@ public class SpCodec {
         mStream.Write (fn);
         mStream.Position = end;
 
-        return true;
+		return true;
  	}
 
     public SpObject Decode (SpType type) {
@@ -339,13 +341,16 @@ public class SpCodec {
     }
 
     public static SpStream Encode (string proto, SpObject obj) {
-        // TODO : determine default buffer size
-        int size = 64;
-        SpStream stream = new SpStream (size);
+        SpStream stream = new SpStream ();
 
-        while (Encode (proto, obj, stream) == false) {
+        if (Encode (proto, obj, stream) == false) {
             if (stream.IsOverflow ()) {
+				if (stream.Position > MAX_SIZE)
+					return null;
+
                 stream = new SpStream (stream.Position);
+				if (Encode (proto, obj, stream) == false)
+					return null;
             }
             else {
                 return null;
@@ -372,7 +377,8 @@ public class SpCodec {
             return false;
 
         SpCodec codec = new SpCodec (stream);
-        return codec.Encode (type, obj);
+        bool success = codec.Encode (type, obj);
+		return (success && stream.IsOverflow () == false);
     }
 
     public static SpObject Decode (string proto, SpStream stream) {
