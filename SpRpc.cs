@@ -28,6 +28,10 @@ public class SpRpc {
         mHeaderType = t;
     }
 
+    public void Attach (string proto) {
+        Attach (SpTypeManager.Import (proto));
+    }
+
     public void Attach (SpTypeManager tm) {
         mAttachTypeManager = tm;
     }
