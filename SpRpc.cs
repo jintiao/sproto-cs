@@ -17,11 +17,19 @@ public class SpRpcDispatchInfo {
 }
 
 public class SpRpc {
+    private SpTypeManager mHostTypeManager;
+    private SpTypeManager mAttachTypeManager;
+
     private SpType mHeaderType;
     private Dictionary<int, SpType> mSessions = new Dictionary<int, SpType> ();
 
-    public SpRpc (SpType header) {
-        mHeaderType = header;
+    public SpRpc (SpTypeManager tm, SpType t) {
+        mHostTypeManager = tm;
+        mHeaderType = t;
+    }
+
+    public void Attach (SpTypeManager tm) {
+        mAttachTypeManager = tm;
     }
 
 	public SpStream Request (string proto) {
@@ -45,7 +53,10 @@ public class SpRpc {
 	}
 
 	private SpStream EncodeRequest (string proto, SpObject args, int session) {
-		SpProtocol protocol = SpTypeManager.Instance.GetProtocolByName (proto);
+        if (mAttachTypeManager == null || mHostTypeManager == null || mHeaderType == null)
+            return null;
+
+        SpProtocol protocol = mAttachTypeManager.GetProtocolByName (proto);
 		if (protocol == null)
 			return null;
 		
@@ -53,13 +64,13 @@ public class SpRpc {
 		header.Insert ("type", protocol.Tag);
 		if (session != 0)
 			header.Insert ("session", session);
-		
-		SpStream stream = SpCodec.Encode (mHeaderType, header);
+
+        SpStream stream = mHostTypeManager.Codec.Encode (mHeaderType, header);
 		if (stream == null)
 			return null;
 
 		if (args != null) {
-			if (SpCodec.Encode (protocol.Request, args, stream) == false) {
+            if (mAttachTypeManager.Codec.Encode (protocol.Request, args, stream) == false) {
 				if (stream.IsOverflow ()) {
 					if (stream.Position > SpCodec.MAX_SIZE)
 						return null;
@@ -67,7 +78,7 @@ public class SpRpc {
 					int size = stream.Position;
 					size = ((size + 7) / 8) * 8;
 					stream = new SpStream (size);
-					if (SpCodec.Encode (protocol.Request, args, stream) == false)
+                    if (mAttachTypeManager.Codec.Encode (protocol.Request, args, stream) == false)
 						return null;
 				}
 				else {
@@ -88,10 +99,10 @@ public class SpRpc {
         header.Insert ("session", session);
 
         SpStream encode_stream = new SpStream ();
-        SpCodec.Encode (mHeaderType, header, encode_stream);
+        mHostTypeManager.Codec.Encode (mHeaderType, header, encode_stream);
 
         if (session != 0 && mSessions.ContainsKey (session)) {
-            SpCodec.Encode (mSessions[session], args, encode_stream);
+            mHostTypeManager.Codec.Encode (mSessions[session], args, encode_stream);
         }
 
         SpStream pack_stream = new SpStream ();
@@ -106,18 +117,18 @@ public class SpRpc {
         SpStream unpack_stream = SpPacker.Unpack (stream);
 
         unpack_stream.Position = 0;
-        SpObject header = SpCodec.Decode (mHeaderType, unpack_stream);
+        SpObject header = mHostTypeManager.Codec.Decode (mHeaderType, unpack_stream);
 
         int session = 0;
         if (header["session"] != null)
             session = header["session"].AsInt ();
 
         if (header["type"] != null) {
-            SpProtocol protocol = SpTypeManager.Instance.GetProtocolByTag (header["type"].AsInt ());
+            SpProtocol protocol = mHostTypeManager.GetProtocolByTag (header["type"].AsInt ());
             if (session != 0) {
                 mSessions[session] = protocol.Response;
             }
-            SpObject obj = SpCodec.Decode (protocol.Request, unpack_stream);
+            SpObject obj = mHostTypeManager.Codec.Decode (protocol.Request, unpack_stream);
 
             return new SpRpcDispatchInfo (session, protocol.Request, obj);
         }
@@ -127,18 +138,29 @@ public class SpRpc {
 			response = mSessions[session];
         SpObject response_obj = null; ;
         if (response != null) {
-            response_obj = SpCodec.Decode (response, unpack_stream);
+            response_obj = mAttachTypeManager.Codec.Decode (response, unpack_stream);
         }
 
         return new SpRpcDispatchInfo (session, response, response_obj);
     }
 
-    public static SpRpc Create (string proto) {
-        SpType type = SpTypeManager.Instance.GetType (proto);
-        if (type == null)
+    public static SpRpc Create (Stream proto, string package) {
+        return Create (SpTypeManager.Import (proto), package);
+    }
+
+    public static SpRpc Create (string proto, string package) {
+        return Create (SpTypeManager.Import (proto), package);
+    }
+
+    public static SpRpc Create (SpTypeManager tm, string package) {
+        if (tm == null)
             return null;
 
-        SpRpc rpc = new SpRpc (type);
+        SpType t = tm.GetType (package);
+        if (t == null)
+            return null;
+
+        SpRpc rpc = new SpRpc (tm, t);
         return rpc;
     }
 }

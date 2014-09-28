@@ -2,8 +2,6 @@
 using System.IO;
 
 public class SpTypeManager : SpProtoParserListener {
-	private static SpTypeManager sInstance = new SpTypeManager ();
-
     private Dictionary<string, SpProtocol> mProtocols = new Dictionary<string, SpProtocol> ();
     private Dictionary<int, SpProtocol> mProtocolsByTag = new Dictionary<int, SpProtocol> ();
 
@@ -13,6 +11,8 @@ public class SpTypeManager : SpProtoParserListener {
 	private SpType mTypeString;
 	private SpType mTypeBoolean;
 
+    private SpCodec mCodec;
+
 	public SpTypeManager () {
 		mTypeInteger = new SpType ("integer");
 		mTypeBoolean = new SpType ("boolean");
@@ -21,6 +21,8 @@ public class SpTypeManager : SpProtoParserListener {
 		OnNewType (mTypeInteger);
 		OnNewType (mTypeString);
 		OnNewType (mTypeBoolean);
+
+        mCodec = new SpCodec (this);
 	}
 
 	public void OnNewType (SpType type) {
@@ -88,25 +90,26 @@ public class SpTypeManager : SpProtoParserListener {
 		return null;
 	}
 
+    public bool IsBuildinType (SpType type) {
+        if (type == mTypeInteger || type == mTypeBoolean || type == mTypeString)
+            return true;
+        return false;
+    }
+
 	public SpType Integer { get { return mTypeInteger; } }
 	public SpType String { get { return mTypeString; } }
 	public SpType Boolean { get { return mTypeBoolean; } }
+    public SpCodec Codec { get { return mCodec; } }
 
-	public static SpTypeManager Instance {
-		get { return sInstance; }
+    public static SpTypeManager Import (Stream stream) {
+        SpTypeManager instance = new SpTypeManager ();
+        new SpProtoParser (instance).Parse (stream);
+        return instance;
 	}
 
-	public static void Import (Stream stream) {
-		new SpProtoParser (sInstance).Parse (stream);
-	}
-
-	public static void Import (string proto) {
-		new SpProtoParser (sInstance).Parse (proto);
-	}
-
-	public static bool IsBuildinType (SpType type) {
-		if (type == sInstance.mTypeInteger || type == sInstance.mTypeBoolean || type == sInstance.mTypeString)
-			return true;
-		return false;
+    public static SpTypeManager Import (string proto) {
+        SpTypeManager instance = new SpTypeManager ();
+        new SpProtoParser (instance).Parse (proto);
+        return instance;
 	}
 }

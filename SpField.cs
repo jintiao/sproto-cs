@@ -7,11 +7,15 @@ public class SpField {
     public short Tag;
 	public bool IsArray;
 
-	public SpField (string name, short tag, string type, bool array) {
+    private SpTypeManager mTypeManager;
+
+	public SpField (string name, short tag, string type, bool array, SpTypeManager m) {
 		Name = name;
 		Tag = tag;
 		TypeName = type;
 		IsArray = array;
+
+        mTypeManager = m;
 	}
 
 	public bool CheckAndUpdate () {
@@ -20,7 +24,7 @@ public class SpField {
 
 		// use GetTypeNoCheck instead of GetType, to prevent infinit GetType call
 		// when a type reference itself like : foobar { a 0 : foobar }
-		Type = SpTypeManager.Instance.GetTypeNoCheck (TypeName);
+        Type = mTypeManager.GetTypeNoCheck (TypeName);
 		return (Type != null);
 	}
 }

@@ -137,7 +137,7 @@ public class SpProtoParser {
 			array = true;
 			type = type.Substring (1);
 		}
-		SpField f = new SpField (name, tag, type, array);
+        SpField f = new SpField (name, tag, type, array, (SpTypeManager)mListener);
 		return f;
 	}
 }
