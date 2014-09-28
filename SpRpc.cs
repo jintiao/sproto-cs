@@ -4,15 +4,30 @@ using System.Linq;
 using System.Text;
 using System.IO;
 
-public class SpRpcDispatchInfo {
-    public int Session;
-    public SpType Type;
-    public SpObject Object;
+public enum SpRpcOp {
+	Request,
+	Response,
+	Unknown,
+}
 
-    public SpRpcDispatchInfo (int s, SpType t, SpObject o) {
+public class SpRpcResult {
+	public int Session;
+	public SpProtocol Protocol;
+	public SpRpcOp Op;
+	public SpObject Arg;
+
+	public SpRpcResult () {
+		Session = 0;
+		Protocol = null;
+		Op = SpRpcOp.Unknown;
+		Arg = null;
+	}
+
+	public SpRpcResult (int s, SpProtocol p, SpRpcOp o, SpObject a) {
         Session = s;
-        Type = t;
-        Object = o;
+		Protocol = p;
+		Op = o;
+		Arg = a;
     }
 }
 
@@ -21,7 +36,7 @@ public class SpRpc {
     private SpTypeManager mAttachTypeManager;
 
     private SpType mHeaderType;
-    private Dictionary<int, SpType> mSessions = new Dictionary<int, SpType> ();
+	private Dictionary<int, SpProtocol> mSessions = new Dictionary<int, SpProtocol> ();
 
     public SpRpc (SpTypeManager tm, SpType t) {
         mHostTypeManager = tm;
@@ -92,7 +107,7 @@ public class SpRpc {
 		}
 
 		if (session != 0) {
-			mSessions[session] = protocol.Response;
+			mSessions[session] = protocol;
 		}
 		
 		return stream;
@@ -106,7 +121,7 @@ public class SpRpc {
         mHostTypeManager.Codec.Encode (mHeaderType, header, encode_stream);
 
         if (session != 0 && mSessions.ContainsKey (session)) {
-            mHostTypeManager.Codec.Encode (mSessions[session], args, encode_stream);
+            mHostTypeManager.Codec.Encode (mSessions[session].Response, args, encode_stream);
         }
 
         SpStream pack_stream = new SpStream ();
@@ -117,7 +132,7 @@ public class SpRpc {
         return pack_stream;
     }
 
-	public SpRpcDispatchInfo Dispatch (SpStream stream) {
+	public SpRpcResult Dispatch (SpStream stream) {
         SpStream unpack_stream = SpPacker.Unpack (stream);
 
         unpack_stream.Position = 0;
@@ -127,25 +142,32 @@ public class SpRpc {
         if (header["session"] != null)
             session = header["session"].AsInt ();
 
-        if (header["type"] != null) {
-            SpProtocol protocol = mHostTypeManager.GetProtocolByTag (header["type"].AsInt ());
-            if (session != 0) {
-                mSessions[session] = protocol.Response;
-            }
-            SpObject obj = mHostTypeManager.Codec.Decode (protocol.Request, unpack_stream);
-
-            return new SpRpcDispatchInfo (session, protocol.Request, obj);
+		if (header["type"] != null) {
+			// handle request
+			SpProtocol protocol = mHostTypeManager.GetProtocolByTag (header["type"].AsInt ());
+			SpObject obj = mHostTypeManager.Codec.Decode (protocol.Request, unpack_stream);
+			if (session != 0)
+				mSessions[session] = protocol;
+			return new SpRpcResult (session, protocol, SpRpcOp.Request, obj);
         }
+		else {
+			// handle response
+			if (mSessions.ContainsKey (session) == false)
+				return new SpRpcResult ();
 
-		SpType response = null;
-		if (mSessions.ContainsKey (session))
-			response = mSessions[session];
-        SpObject response_obj = null; ;
-        if (response != null) {
-            response_obj = mAttachTypeManager.Codec.Decode (response, unpack_stream);
-        }
+			SpProtocol protocol = mSessions[session];
+			mSessions.Remove (session);
 
-        return new SpRpcDispatchInfo (session, response, response_obj);
+			if (protocol == null)
+				return new SpRpcResult ();
+
+			if (protocol.Response == null)
+				return new SpRpcResult (session, protocol, SpRpcOp.Response, null);
+
+			SpObject obj = mAttachTypeManager.Codec.Decode (protocol.Response, unpack_stream);
+			return new SpRpcResult (session, protocol, SpRpcOp.Response, obj);
+		}
+
     }
 
     public static SpRpc Create (Stream proto, string package) {
