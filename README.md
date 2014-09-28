@@ -119,7 +119,7 @@ public void Run () {
 
   // decode
   encode_stream.Position = 0;
-  SpObject newObj = manager.Codec.Decode ("AddressBook", encode_stream);
+  SpObject newObj = manager.Codec.Encode ("AddressBook", encode_stream);
 
   // pack
   encode_stream.Position = 0;
