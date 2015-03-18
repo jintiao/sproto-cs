@@ -132,12 +132,20 @@ public class SpProtoParser {
 		string name = words[0];
         short tag = short.Parse (words[1]);
 		string type = words[2];
-		bool array = false;
+		bool table = false;
+		string key = null;
 		if (type[0] == '*') {
-			array = true;
+			table = true;
 			type = type.Substring (1);
+
+			int b = type.IndexOf ('(');
+			if (b > 0) {
+				int e = type.IndexOf (')');
+				key = type.Substring (b + 1, e - b - 1);
+				type = type.Substring (0, b);
+			}
 		}
-        SpField f = new SpField (name, tag, type, array, (SpTypeManager)mListener);
+		SpField f = new SpField (name, tag, type, table, key, (SpTypeManager)mListener);
 		return f;
 	}
 }

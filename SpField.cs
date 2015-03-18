@@ -5,15 +5,17 @@ public class SpField {
 	public SpType Type;
     public string TypeName;
     public short Tag;
-	public bool IsArray;
+	public bool IsTable;
+	public string KeyName;
 
     private SpTypeManager mTypeManager;
 
-	public SpField (string name, short tag, string type, bool array, SpTypeManager m) {
+	public SpField (string name, short tag, string type, bool table, string key, SpTypeManager m) {
 		Name = name;
 		Tag = tag;
 		TypeName = type;
-		IsArray = array;
+		IsTable = table;
+		KeyName = key;
 
         mTypeManager = m;
 	}
