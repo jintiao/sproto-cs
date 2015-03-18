@@ -78,8 +78,11 @@ public class SpCodec {
 
 		List<KeyValuePair<SpObject, SpField>> objs = new List<KeyValuePair<SpObject, SpField>> ();
         int current_tag = -1;
+		
+		Dictionary<int, SpField>.ValueCollection.Enumerator en = type.Fields.Values.GetEnumerator ();
+		while (en.MoveNext ()) {
+			SpField f = en.Current;
 
-        foreach (SpField f in type.Fields.Values) {
 			if (f == null) {
 				return false;
 			}
@@ -122,8 +125,11 @@ public class SpCodec {
             fn++;
             current_tag = f.Tag;
         }
+		
+		List<KeyValuePair<SpObject, SpField>>.Enumerator e = objs.GetEnumerator ();
+		while (e.MoveNext ()) {
+			KeyValuePair<SpObject, SpField> entry = e.Current;
 
-		foreach (KeyValuePair<SpObject, SpField> entry in objs) {
             if (entry.Value.IsTable) {
                 int array_begin = mStream.Position;
                 int size = 0;
