@@ -153,7 +153,11 @@ public class SpStream {
 			Array.Copy (bytes, offset, mBuffer, mPosition, length);
 		}
 		PositionAdd (length);
-    }
+	}
+	
+	public void CorrectLength () {
+		mTail = mPosition;
+	}
 
 	// NOTE : mPosition can be larger than mLength, but nothing will be wirten if so.
 	//        using this feature to determine size required.
