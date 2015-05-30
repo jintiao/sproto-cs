@@ -129,10 +129,10 @@ public class SpStream {
 			mBuffer[mPosition + 1] = (byte)((n >> 8) & 0xff);
 			mBuffer[mPosition + 2] = (byte)((n >> 16) & 0xff);
 			mBuffer[mPosition + 3] = (byte)((n >> 24) & 0xff);
-			mBuffer[mPosition + 3] = (byte)((n >> 32) & 0xff);
-			mBuffer[mPosition + 3] = (byte)((n >> 40) & 0xff);
-			mBuffer[mPosition + 3] = (byte)((n >> 48) & 0xff);
-			mBuffer[mPosition + 3] = (byte)((n >> 56) & 0xff);
+			mBuffer[mPosition + 4] = (byte)((n >> 32) & 0xff);
+			mBuffer[mPosition + 5] = (byte)((n >> 40) & 0xff);
+			mBuffer[mPosition + 6] = (byte)((n >> 48) & 0xff);
+			mBuffer[mPosition + 7] = (byte)((n >> 56) & 0xff);
 		}
 		PositionAdd (8);
     }
