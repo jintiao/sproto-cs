@@ -155,8 +155,8 @@ public class SpStream {
 		PositionAdd (length);
 	}
 	
-	public void CorrectLength () {
-		mTail = mPosition;
+	public void CorrectLength (int c) {
+		mTail = mPosition + c;
 	}
 
 	// NOTE : mPosition can be larger than mLength, but nothing will be wirten if so.

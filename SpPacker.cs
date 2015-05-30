@@ -37,14 +37,14 @@ public class SpPacker {
         return notzero + 1;
     }
 
-	public static void WriteFF (byte[] src, int src_offset, SpStream output, int n) {
+	public static void WriteFF (byte[] src, int src_offset, SpStream output, int n, int correctPos) {
 		int align8_n = (n + 7) & (~7);
 		output.Write ((byte)0xff);
 		output.Write ((byte)(align8_n / 8 - 1));
 		output.Write (src, src_offset, n);
 		for (int i = 0; i < align8_n - n; i++)
 			output.Write ((byte)0);
-		output.CorrectLength ();
+		output.CorrectLength (correctPos);
     }
 
 	public static SpStream Pack (SpStream input) {
@@ -74,6 +74,7 @@ public class SpPacker {
 				Array.Copy (input.Buffer, input.Offset, new_input.Buffer, new_input.Offset, input.Length);
 				new_input.Position = new_input.Offset;
 				input = new_input;
+				src_size = new_size;
 			}
 			else {
 				int pos = input.Position;
@@ -106,14 +107,14 @@ public class SpPacker {
                 ff_n++;
                 if (ff_n == 256) {
 					output.Position = ff_dest_start;
-                    WriteFF (src, ff_src_start, output, 256 * 8);
+                    WriteFF (src, ff_src_start, output, 256 * 8, n);
                     ff_n = 0;
                 }
             }
             else {
 				if (ff_n > 0) {
 					output.Position = ff_dest_start;
-                    WriteFF (src, ff_src_start, output, ff_n * 8);
+                    WriteFF (src, ff_src_start, output, ff_n * 8, n);
                     ff_n = 0;
                 }
             }
@@ -123,11 +124,11 @@ public class SpPacker {
 
 		if (ff_n == 1) {
 			output.Position = ff_dest_start;
-			WriteFF (src, ff_src_start, output, 8);
+			WriteFF (src, ff_src_start, output, 8, 0);
 		}
 		else if (ff_n > 1) {
 			output.Position = ff_dest_start;
-			WriteFF (src, ff_src_start, output, src_size - (ff_src_start - src_start));
+			WriteFF (src, ff_src_start, output, src_size - (ff_src_start - src_start), 0);
 		}
 
 		return (output.IsOverflow () == false);
