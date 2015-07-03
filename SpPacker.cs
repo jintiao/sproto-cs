@@ -159,7 +159,7 @@ public class SpPacker {
 			src_offset++;
 
 			if (header == 0xff) {
-				if (src_offset >= src_size)
+				if (src_offset > src_size)
 					return false;
 
 				int n = (src[src_offset] + 1) * 8;
@@ -174,7 +174,7 @@ public class SpPacker {
 				for (int i = 0; i < 8; i++) {
 					int nz = (header >> i) & 1;
 					if (nz != 0) {
-						if (src_offset >= src_size)
+						if (src_offset > src_size)
 							return false;
 
 						output.Write (src[src_offset]);
