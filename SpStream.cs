@@ -171,7 +171,7 @@ public class SpStream {
 	}
 
 	private bool CanWrite (int n) {
-		return (mPosition + n < mLength);
+		return (mPosition + n <= mLength);
 	}
 
     public int Position { 
